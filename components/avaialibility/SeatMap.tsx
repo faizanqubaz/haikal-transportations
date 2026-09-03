@@ -28,15 +28,15 @@ export default function SeatMap({
     }
 
     setSelected((previous) => {
-      const exists = previous.includes(seat.number);
+      const exists = previous.includes(seat.seatNumber);
 
       if (exists) {
         return previous.filter(
-          (item) => item !== seat.number
+          (item) => item !== seat.seatNumber
         );
       }
 
-      return [...previous, seat.number];
+      return [...previous, seat.seatNumber];
     });
   };
 
@@ -68,14 +68,11 @@ export default function SeatMap({
       {/* Seats */}
       <div className="mx-auto grid max-w-[320px] grid-cols-5 gap-2 sm:gap-3">
         {seats.map((seat, index) => {
-          /*
-            Every 4 seats create an aisle.
-          */
           const isAisle = index % 4 === 2;
 
           return (
             <div
-              key={seat.number}
+              key={seat.seatNumber}
               className={isAisle ? "col-start-4" : ""}
             >
               <button
@@ -83,25 +80,24 @@ export default function SeatMap({
                 disabled={seat.status === "booked"}
                 onClick={() => handleSeatClick(seat)}
                 className={`
-                  relative flex h-12 w-full flex-col
-                  items-center justify-center
-                  rounded-lg border
-                  transition
-                  sm:h-14
+          relative flex h-12 w-full flex-col
+          items-center justify-center
+          rounded-lg border
+          transition
+          sm:h-14
 
-                  ${
-                    seat.status === "booked"
-                      ? "cursor-not-allowed border-gray-200 bg-gray-200 text-gray-400"
-                      : selected.includes(seat.number)
+          ${seat.status === "booked"
+                    ? "cursor-not-allowed border-gray-200 bg-gray-200 text-gray-400"
+                    : selected.includes(seat.seatNumber)
                       ? "border-teal-700 bg-teal-700 text-white shadow-md"
                       : "border-gray-200 bg-white text-gray-700 hover:border-teal-600 hover:bg-teal-50"
                   }
-                `}
+        `}
               >
                 <Armchair size={17} />
 
                 <span className="text-[9px] font-bold">
-                  {seat.number}
+                  {seat.seatNumber}
                 </span>
               </button>
             </div>

@@ -4,8 +4,8 @@ export type SeatStatus =
   | "selected";
 
 export type Seat = {
-  number: string;
-  status: SeatStatus;
+   seatNumber: string;
+  status: "available" | "booked"
 };
 
 export type BusAvailability = {
@@ -33,7 +33,7 @@ const createSeats = (
 
   for (let i = 1; i <= 40; i++) {
     seats.push({
-      number: String(i),
+      seatNumber: String(i),
       status: bookedSeats.includes(String(i))
         ? "booked"
         : "available",
