@@ -13,7 +13,13 @@ import {
   Bus as BusIcon,
   Phone,
   Route,
+  X,
+  CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
+import SeatMap from "@/components/avaialibility/SeatMap";
+
+
 
 /* =========================================================
    TYPES
@@ -39,6 +45,17 @@ type Bus = {
   price: number;
   image?: string;
   seats: Seat[];
+};
+
+type BookingResponse = {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  booking?: {
+    _id?: string;
+    bookingReference?: string;
+    status?: string;
+  };
 };
 
 /* =========================================================
@@ -139,6 +156,66 @@ export default function BookingPage() {
   const [hasSearched, setHasSearched] = useState(false);
 
   /* =======================================================
+     SEAT STATES
+  ======================================================= */
+
+  const [expandedBusId, setExpandedBusId] = useState<string | null>(
+    null
+  );
+
+  const [loadingSeatsBusId, setLoadingSeatsBusId] = useState<
+    string | null
+  >(null);
+
+  const [selectedSeats, setSelectedSeats] = useState<
+    Record<string, string[]>
+  >({});
+
+  /* =======================================================
+     BOOKING MODAL STATES
+  ======================================================= */
+
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
+  const [submitting, setSubmitting] = useState(false);
+
+  const [submitError, setSubmitError] = useState<string | null>(
+    null
+  );
+
+  const [submitted, setSubmitted] = useState(false);
+
+  const [bookingReference, setBookingReference] = useState<
+    string | null
+  >(null);
+
+  const [passenger, setPassenger] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+
+  /* =======================================================
+     CURRENT BOOKING BUS
+  ======================================================= */
+
+  const bookingBus = useMemo(() => {
+    if (!expandedBusId) return null;
+
+    return (
+      buses.find((bus) => bus._id === expandedBusId) ?? null
+    );
+  }, [buses, expandedBusId]);
+
+  const bookingSelectedSeats = bookingBus
+    ? selectedSeats[bookingBus._id] ?? []
+    : [];
+
+  const totalFare = bookingBus
+    ? bookingBus.price * bookingSelectedSeats.length
+    : 0;
+
+  /* =======================================================
      LOAD CITIES
   ======================================================= */
 
@@ -214,6 +291,13 @@ export default function BookingPage() {
     setLoading(true);
     setError(null);
 
+    /*
+     * Close any previously opened seat map
+     */
+    setExpandedBusId(null);
+
+    setSelectedSeats({});
+
     try {
       const params = new URLSearchParams();
 
@@ -255,17 +339,11 @@ export default function BookingPage() {
         message?: string;
       } = await res.json();
 
-      console.log(
-        "BUS SEARCH RESPONSE:",
-        data
-      );
+      console.log("BUS SEARCH RESPONSE:", data);
 
       setBuses(data.buses ?? []);
     } catch (err) {
-      console.error(
-        "BUS SEARCH ERROR:",
-        err
-      );
+      console.error("BUS SEARCH ERROR:", err);
 
       if (err instanceof Error) {
         setError(err.message);
@@ -332,6 +410,342 @@ export default function BookingPage() {
   }, [date]);
 
   /* =======================================================
+     VIEW / HIDE SEATS
+  ======================================================= */
+
+
+async function handleViewSeats(bus: Bus) {
+  /*
+   * If this bus is already expanded,
+   * hide the seat map.
+   */
+  if (expandedBusId === bus._id) {
+    setExpandedBusId(null);
+
+    setSelectedSeats((current) => ({
+      ...current,
+      [bus._id]: [],
+    }));
+
+    return;
+  }
+
+  try {
+    setLoadingSeatsBusId(bus._id);
+    setSubmitError(null);
+
+    console.log(
+      "FETCHING LATEST BUS:",
+      bus._id
+    );
+
+    const res = await fetch(
+      `/api/busses/${bus._id}`,
+      {
+        method: "GET",
+        cache: "no-store",
+      }
+    );
+
+    const data = await res.json();
+
+    console.log(
+      "LATEST BUS RESPONSE:",
+      data
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        data?.error ||
+          data?.message ||
+          "Unable to load latest seat availability."
+      );
+    }
+
+    if (!data.bus) {
+      throw new Error(
+        "Bus data was not returned."
+      );
+    }
+
+    /*
+     * IMPORTANT:
+     *
+     * Your API returns:
+     *
+     * {
+     *   id: "6a9...",
+     *   busNumber: "ht-101",
+     *   seats: [...]
+     * }
+     *
+     * But the BookingPage uses `_id`.
+     *
+     * Normalize `id` -> `_id`.
+     */
+    const latestBus: Bus = {
+      ...data.bus,
+      _id: data.bus._id ?? data.bus.id,
+    };
+
+    /*
+     * Make sure we actually received an ID.
+     */
+    if (!latestBus._id) {
+      throw new Error(
+        "Bus ID was not returned by the server."
+      );
+    }
+
+    console.log(
+      "NORMALIZED BUS:",
+      latestBus
+    );
+
+    console.log(
+      "NORMALIZED BUS ID:",
+      latestBus._id
+    );
+
+    /*
+     * Update the bus inside the search results.
+     */
+    setBuses((currentBuses) =>
+      currentBuses.map((currentBus) =>
+        currentBus._id === latestBus._id
+          ? latestBus
+          : currentBus
+      )
+    );
+
+    /*
+     * Clear previously selected seats
+     * for this bus.
+     */
+    setSelectedSeats((current) => ({
+      ...current,
+      [latestBus._id]: [],
+    }));
+
+    /*
+     * NOW expand the correct bus.
+     */
+    setExpandedBusId(latestBus._id);
+  } catch (err) {
+    console.error(
+      "VIEW_SEATS_ERROR:",
+      err
+    );
+
+    setSubmitError(
+      err instanceof Error
+        ? err.message
+        : "Unable to load seat availability."
+    );
+  } finally {
+    setLoadingSeatsBusId(null);
+  }
+}
+
+
+
+  /* =======================================================
+     SEAT SELECTION
+  ======================================================= */
+
+  function handleSeatChange(
+    busId: string,
+    seats: string[]
+  ) {
+    setSelectedSeats((current) => ({
+      ...current,
+      [busId]: seats,
+    }));
+  }
+
+  /* =======================================================
+     CONTINUE TO BOOKING
+  ======================================================= */
+
+  function handleContinue(bus: Bus) {
+    const seats = selectedSeats[bus._id] ?? [];
+
+    if (seats.length === 0) {
+      return;
+    }
+
+    setSubmitError(null);
+
+    setExpandedBusId(bus._id);
+
+    setShowBookingModal(true);
+  }
+
+  /* =======================================================
+     CONFIRM BOOKING
+  ======================================================= */
+
+  async function handleConfirm() {
+    if (
+      !passenger.name.trim() ||
+      !passenger.email.trim() ||
+      !passenger.phone.trim()
+    ) {
+      setSubmitError(
+        "Please complete all passenger information."
+      );
+
+      return;
+    }
+
+    if (!bookingBus) {
+      setSubmitError(
+        "Bus information is missing."
+      );
+
+      return;
+    }
+
+    const seats =
+      selectedSeats[bookingBus._id] ?? [];
+
+    if (seats.length === 0) {
+      setSubmitError(
+        "Please select at least one seat."
+      );
+
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const res = await fetch(
+        "/api/bookings",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            passenger: {
+              name: passenger.name.trim(),
+              email: passenger.email.trim(),
+              phone: passenger.phone.trim(),
+            },
+
+            busId: bookingBus._id,
+
+            seats,
+          }),
+        }
+      );
+
+      const data: BookingResponse =
+        await res.json();
+
+      console.log(
+        "BOOKING RESPONSE:",
+        data
+      );
+
+      if (!res.ok) {
+        throw new Error(
+          data.error ||
+            data.message ||
+            "Unable to create your booking request."
+        );
+      }
+
+      if (
+        data.booking?.bookingReference
+      ) {
+        setBookingReference(
+          data.booking.bookingReference
+        );
+      } else if (
+        data.booking?._id
+      ) {
+        setBookingReference(
+          data.booking._id
+        );
+      }
+
+      /*
+       * Mark booking as successfully submitted.
+       */
+      setSubmitted(true);
+    } catch (error) {
+      console.error(
+        "BOOKING ERROR:",
+        error
+      );
+
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while creating your booking."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  /* =======================================================
+     CLOSE SUCCESS
+  ======================================================= */
+
+  function handleCloseSuccess() {
+    setShowBookingModal(false);
+
+    setSubmitted(false);
+
+    setBookingReference(null);
+
+    setPassenger({
+      name: "",
+      email: "",
+      phone: "",
+    });
+
+    if (bookingBus) {
+      setSelectedSeats((current) => ({
+        ...current,
+        [bookingBus._id]: [],
+      }));
+    }
+
+    setSubmitError(null);
+
+    setExpandedBusId(null);
+
+    /*
+     * Refresh search results so the latest seat
+     * information is displayed.
+     */
+    if (pickup && dropoff && date) {
+      runSearch(
+        pickup,
+        dropoff,
+        date
+      );
+    }
+  }
+
+  /* =======================================================
+     CLOSE BOOKING MODAL
+  ======================================================= */
+
+  function closeBookingModal() {
+    if (submitting) return;
+
+    setShowBookingModal(false);
+
+    setSubmitError(null);
+  }
+
+  /* =======================================================
      RENDER
   ======================================================= */
 
@@ -345,8 +759,6 @@ export default function BookingPage() {
       <section className="border-b border-teal-800 bg-teal-700">
 
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-
-          {/* HEADER */}
 
           <div className="max-w-2xl">
 
@@ -388,9 +800,7 @@ export default function BookingPage() {
             className="mt-7 grid grid-cols-1 gap-3 rounded-3xl bg-white p-4 shadow-xl sm:grid-cols-[1fr_auto_1fr_1fr_auto] sm:items-end sm:p-3"
           >
 
-            {/* ===============================================
-                FROM
-            =============================================== */}
+            {/* FROM */}
 
             <label className="block">
 
@@ -443,9 +853,7 @@ export default function BookingPage() {
 
             </label>
 
-            {/* ===============================================
-                DESKTOP SWAP
-            =============================================== */}
+            {/* DESKTOP SWAP */}
 
             <button
               type="button"
@@ -461,9 +869,7 @@ export default function BookingPage() {
               <ArrowRight size={17} />
             </button>
 
-            {/* ===============================================
-                TO
-            =============================================== */}
+            {/* TO */}
 
             <label className="block">
 
@@ -516,9 +922,7 @@ export default function BookingPage() {
 
             </label>
 
-            {/* ===============================================
-                DATE
-            =============================================== */}
+            {/* DATE */}
 
             <label className="block">
 
@@ -550,9 +954,7 @@ export default function BookingPage() {
 
             </label>
 
-            {/* ===============================================
-                SEARCH
-            =============================================== */}
+            {/* SEARCH */}
 
             <button
               type="submit"
@@ -586,9 +988,7 @@ export default function BookingPage() {
 
           </form>
 
-          {/* =================================================
-              MOBILE SWAP
-          ================================================= */}
+          {/* MOBILE SWAP */}
 
           <button
             type="button"
@@ -617,9 +1017,7 @@ export default function BookingPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
 
-        {/* ===================================================
-            SEARCH SUMMARY
-        =================================================== */}
+        {/* SEARCH SUMMARY */}
 
         {hasSearched &&
           !loading &&
@@ -679,9 +1077,7 @@ export default function BookingPage() {
             </div>
           )}
 
-        {/* ===================================================
-            LOADING
-        =================================================== */}
+        {/* LOADING */}
 
         {loading ? (
 
@@ -724,9 +1120,7 @@ export default function BookingPage() {
 
         ) : error ? (
 
-          /* =================================================
-             ERROR
-          ================================================= */
+          /* ERROR */
 
           <div className="rounded-3xl border border-red-100 bg-red-50 px-6 py-16 text-center">
 
@@ -765,9 +1159,7 @@ export default function BookingPage() {
 
         ) : !hasSearched ? (
 
-          /* =================================================
-             BEFORE SEARCH
-          ================================================= */
+          /* BEFORE SEARCH */
 
           <div className="rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-20 text-center">
 
@@ -794,9 +1186,7 @@ export default function BookingPage() {
 
         ) : results.length === 0 ? (
 
-          /* =================================================
-             NO RESULTS
-          ================================================= */
+          /* NO RESULTS */
 
           <div className="rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-20 text-center">
 
@@ -872,6 +1262,15 @@ export default function BookingPage() {
                 available > 0 &&
                 available <= 4;
 
+              const busSelectedSeats =
+                selectedSeats[bus._id] ?? [];
+
+              const isExpanded =
+                expandedBusId === bus._id;
+
+              const isLoadingSeats =
+                loadingSeatsBusId === bus._id;
+
               return (
 
                 <article
@@ -888,8 +1287,6 @@ export default function BookingPage() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
                       <div className="flex items-center gap-3">
-
-                        {/* BUS ICON */}
 
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50">
 
@@ -976,8 +1373,6 @@ export default function BookingPage() {
 
                         <div className="flex items-center gap-3 sm:gap-5">
 
-                          {/* DEPARTURE */}
-
                           <div className="min-w-[75px]">
 
                             <p className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
@@ -989,8 +1384,6 @@ export default function BookingPage() {
                             </p>
 
                           </div>
-
-                          {/* LINE */}
 
                           <div className="flex flex-1 items-center gap-2">
 
@@ -1018,8 +1411,6 @@ export default function BookingPage() {
                             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-teal-700" />
 
                           </div>
-
-                          {/* ARRIVAL */}
 
                           <div className="min-w-[75px] text-right">
 
@@ -1084,7 +1475,7 @@ export default function BookingPage() {
 
                       </div>
 
-                      {/* AVAILABLE SEATS */}
+                      {/* AVAILABLE */}
 
                       <div
                         className={`rounded-2xl p-4 ${
@@ -1124,11 +1515,9 @@ export default function BookingPage() {
                               : "text-emerald-700"
                           }`}
                         >
-
                           {soldOut
                             ? "Sold out"
                             : `${available} available`}
-
                         </p>
 
                       </div>
@@ -1182,7 +1571,7 @@ export default function BookingPage() {
                     </div>
 
                     {/* =========================================
-                        SEAT STATUS EXPLANATION
+                        SEAT STATUS
                     ========================================= */}
 
                     <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-gray-100 pt-4">
@@ -1259,6 +1648,224 @@ export default function BookingPage() {
                       </div>
                     )}
 
+                    {/* =========================================
+                        VIEW / HIDE + CONTINUE
+                    ========================================= */}
+
+                    <div className="mt-6 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+
+                      <div>
+
+                        {busSelectedSeats.length > 0 ? (
+                          <p className="text-sm font-semibold text-teal-700">
+
+                            {busSelectedSeats.length}{" "}
+                            {busSelectedSeats.length === 1
+                              ? "seat"
+                              : "seats"}{" "}
+                            selected
+
+                            <span className="ml-2 text-gray-400">
+                              ({busSelectedSeats.join(", ")})
+                            </span>
+
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-400">
+                            Select your seats to continue
+                          </p>
+                        )}
+
+                      </div>
+
+                      <div className="flex flex-col gap-3 sm:flex-row">
+
+                        {/* VIEW / HIDE */}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleViewSeats(bus)
+                          }
+                          disabled={
+                            soldOut ||
+                            isLoadingSeats
+                          }
+                          className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-5 py-3 text-sm font-bold text-gray-700 transition hover:border-teal-700 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+
+                          {isLoadingSeats ? (
+                            <>
+                              <Loader2
+                                size={17}
+                                className="animate-spin"
+                              />
+
+                              Loading seats...
+                            </>
+                          ) : isExpanded ? (
+                            <>
+                              <Users size={17} />
+
+                              Hide seats
+                            </>
+                          ) : (
+                            <>
+                              <Users size={17} />
+
+                              View seats
+                            </>
+                          )}
+
+                        </button>
+
+                        {/* CONTINUE */}
+
+                        <button
+                          type="button"
+                          disabled={
+                            busSelectedSeats.length ===
+                              0 ||
+                            soldOut
+                          }
+                          onClick={() =>
+                            handleContinue(bus)
+                          }
+                          className="flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                        >
+
+                          Continue
+
+                          <ArrowRight
+                            size={17}
+                          />
+
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                    {/* =========================================
+                        SEAT MAP
+                    ========================================= */}
+
+                    {isExpanded && (
+                      <div className="mt-6 border-t border-gray-100 pt-6">
+
+                        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+
+                          <div>
+
+                            <h4 className="text-base font-extrabold text-gray-900">
+                              Select your seats
+                            </h4>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              Choose one or more available seats.
+                            </p>
+
+                          </div>
+
+                          {busSelectedSeats.length >
+                            0 && (
+                            <div className="rounded-full bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700">
+
+                              {busSelectedSeats.length} selected
+
+                            </div>
+                          )}
+
+                        </div>
+
+                        <SeatMap
+                          key={`${bus._id}-${bus.seats
+                            .map(
+                              (seat) =>
+                                `${seat.seatNumber}-${seat.status}`
+                            )
+                            .join("|")}`}
+                          seats={bus.seats}
+                          onSeatChange={(seats) =>
+                            handleSeatChange(
+                              bus._id,
+                              seats
+                            )
+                          }
+                        />
+
+                        {/* SEAT MAP BOTTOM CONTINUE */}
+
+                        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+
+                          <div>
+
+                            <p className="text-xs font-bold uppercase tracking-wider text-teal-700">
+                              Your selection
+                            </p>
+
+                            <p className="mt-1 text-sm font-bold text-gray-900">
+
+                              {busSelectedSeats.length ===
+                              0
+                                ? "No seats selected"
+                                : busSelectedSeats.join(
+                                    ", "
+                                  )}
+
+                            </p>
+
+                          </div>
+
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+
+                            {busSelectedSeats.length >
+                              0 && (
+                              <div className="text-left sm:text-right">
+
+                                <p className="text-xs text-gray-500">
+                                  Total fare
+                                </p>
+
+                                <p className="text-xl font-extrabold text-teal-800">
+                                  {formatPKR(
+                                    bus.price *
+                                      busSelectedSeats.length
+                                  )}
+                                </p>
+
+                              </div>
+                            )}
+
+                            <button
+                              type="button"
+                              disabled={
+                                busSelectedSeats.length ===
+                                0
+                              }
+                              onClick={() =>
+                                handleContinue(
+                                  bus
+                                )
+                              }
+                              className="flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                            >
+
+                              Continue to booking
+
+                              <ArrowRight
+                                size={17}
+                              />
+
+                            </button>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+                    )}
+
                   </div>
 
                 </article>
@@ -1272,6 +1879,684 @@ export default function BookingPage() {
         )}
 
       </section>
+
+      {/* =====================================================
+          BOOKING MODAL
+      ===================================================== */}
+
+      {showBookingModal && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-3 backdrop-blur-md sm:p-6"
+          onClick={() => {
+            if (!submitting) {
+              closeBookingModal();
+            }
+          }}
+        >
+
+          {/* =================================================
+              SUCCESS
+          ================================================= */}
+
+          {submitted ? (
+
+            <div
+              onClick={(e) =>
+                e.stopPropagation()
+              }
+              className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
+            >
+
+              <div className="h-2 bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-500" />
+
+              <div className="p-6 text-center sm:p-8">
+
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-teal-50">
+
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-100">
+
+                    <CheckCircle2
+                      size={32}
+                      className="text-teal-700"
+                    />
+
+                  </div>
+
+                </div>
+
+                <p className="mt-6 text-xs font-bold tracking-[0.2em] text-teal-700">
+                  HAIKAL TOURS
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
+                  Booking Request Sent
+                </h2>
+
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-gray-500">
+                  Thank you for choosing Haikal Tours.
+                  Your booking request has been successfully
+                  received.
+                </p>
+
+                <div className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full bg-amber-50 px-4 py-2">
+
+                  <Clock
+                    size={16}
+                    className="text-amber-600"
+                  />
+
+                  <span className="text-sm font-bold text-amber-700">
+                    Booking Pending
+                  </span>
+
+                </div>
+
+                {bookingReference && (
+                  <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-gray-400">
+                      BOOKING REFERENCE
+                    </p>
+
+                    <p className="mt-1 text-lg font-bold tracking-wider text-gray-900">
+                      {bookingReference}
+                    </p>
+
+                  </div>
+                )}
+
+                {bookingBus && (
+                  <div className="mt-5 rounded-2xl bg-gray-50 p-5 text-left">
+
+                    <div className="flex items-center gap-3">
+
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+
+                        <BusIcon
+                          size={19}
+                          className="text-teal-700"
+                        />
+
+                      </div>
+
+                      <div>
+
+                        <p className="text-sm font-bold text-gray-900">
+                          {bookingBus.busNumber}
+                        </p>
+
+                        <p className="text-xs text-gray-500">
+                          {bookingBus.company}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="mt-5 flex items-center gap-3">
+
+                      <MapPin
+                        size={17}
+                        className="shrink-0 text-teal-700"
+                      />
+
+                      <div>
+
+                        <p className="text-xs text-gray-400">
+                          ROUTE
+                        </p>
+
+                        <p className="text-sm font-bold text-gray-900">
+                          {bookingBus.pickup} →{" "}
+                          {bookingBus.dropoff}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3">
+
+                      <Users
+                        size={17}
+                        className="shrink-0 text-teal-700"
+                      />
+
+                      <div>
+
+                        <p className="text-xs text-gray-400">
+                          SELECTED SEATS
+                        </p>
+
+                        <p className="text-sm font-bold text-gray-900">
+                          {bookingSelectedSeats.join(
+                            ", "
+                          )}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3">
+
+                      <Calendar
+                        size={17}
+                        className="shrink-0 text-teal-700"
+                      />
+
+                      <div>
+
+                        <p className="text-xs text-gray-400">
+                          TRAVEL DATE
+                        </p>
+
+                        <p className="text-sm font-bold text-gray-900">
+                          {formatShortDate(
+                            bookingBus.date
+                          )}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3">
+
+                      <Clock
+                        size={17}
+                        className="shrink-0 text-teal-700"
+                      />
+
+                      <div>
+
+                        <p className="text-xs text-gray-400">
+                          DEPARTURE
+                        </p>
+
+                        <p className="text-sm font-bold text-gray-900">
+                          {bookingBus.departure}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-4">
+
+                      <span className="text-sm font-medium text-gray-500">
+                        Total Fare
+                      </span>
+
+                      <span className="text-xl font-bold text-teal-700">
+                        {formatPKR(
+                          totalFare
+                        )}
+                      </span>
+
+                    </div>
+
+                  </div>
+                )}
+
+                <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-left">
+
+                  <Clock
+                    size={18}
+                    className="mt-0.5 shrink-0 text-amber-600"
+                  />
+
+                  <p className="text-xs leading-5 text-amber-800">
+                    Your booking is currently pending.
+                    Haikal Tours will review your request
+                    and approve it before your seats are
+                    confirmed.
+                  </p>
+
+                </div>
+
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+
+                  <ShieldCheck size={14} />
+
+                  Your booking information has been
+                  securely submitted.
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={
+                    handleCloseSuccess
+                  }
+                  className="mt-6 w-full rounded-xl bg-[#063d43] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#052f34]"
+                >
+                  Done
+                </button>
+
+              </div>
+
+            </div>
+
+          ) : (
+
+            /* =================================================
+               PASSENGER FORM
+            ================================================= */
+
+            <div
+              onClick={(e) =>
+                e.stopPropagation()
+              }
+              className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[90vh]"
+            >
+
+              {/* HEADER */}
+
+              <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4 sm:px-7 sm:py-5">
+
+                <div>
+
+                  <p className="text-xs font-bold tracking-[0.2em] text-teal-700">
+                    BOOK YOUR TRIP
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+                    Passenger Information
+                  </h2>
+
+                </div>
+
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={
+                    closeBookingModal
+                  }
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+
+                  <X size={20} />
+
+                </button>
+
+              </div>
+
+              {/* BODY */}
+
+              <div className="overflow-y-auto p-5 sm:p-7">
+
+                <div className="grid gap-6 lg:grid-cols-2">
+
+                  {/* =========================================
+                      PASSENGER
+                  ========================================= */}
+
+                  <div>
+
+                    <div className="mb-5">
+
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Your Information
+                      </h3>
+
+                      <p className="mt-1 text-sm text-gray-500">
+                        Please enter your basic information.
+                      </p>
+
+                    </div>
+
+                    <div className="space-y-4">
+
+                      {/* NAME */}
+
+                      <div>
+
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                          Full Name
+                        </label>
+
+                        <input
+                          type="text"
+                          value={
+                            passenger.name
+                          }
+                          disabled={
+                            submitting
+                          }
+                          onChange={(e) =>
+                            setPassenger({
+                              ...passenger,
+                              name: e.target.value,
+                            })
+                          }
+                          placeholder="Enter your full name"
+                          className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
+                        />
+
+                      </div>
+
+                      {/* EMAIL */}
+
+                      <div>
+
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                          Email Address
+                        </label>
+
+                        <input
+                          type="email"
+                          value={
+                            passenger.email
+                          }
+                          disabled={
+                            submitting
+                          }
+                          onChange={(e) =>
+                            setPassenger({
+                              ...passenger,
+                              email: e.target.value,
+                            })
+                          }
+                          placeholder="you@example.com"
+                          className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
+                        />
+
+                      </div>
+
+                      {/* PHONE */}
+
+                      <div>
+
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                          Phone Number
+                        </label>
+
+                        <input
+                          type="tel"
+                          value={
+                            passenger.phone
+                          }
+                          disabled={
+                            submitting
+                          }
+                          onChange={(e) =>
+                            setPassenger({
+                              ...passenger,
+                              phone: e.target.value,
+                            })
+                          }
+                          placeholder="+92 300 1234567"
+                          className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
+                        />
+
+                      </div>
+
+                      {submitError && (
+                        <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+
+                          <p className="text-sm font-medium text-red-700">
+                            {submitError}
+                          </p>
+
+                        </div>
+                      )}
+
+                    </div>
+
+                  </div>
+
+                  {/* =========================================
+                      TRIP DETAILS
+                  ========================================= */}
+
+                  {bookingBus && (
+                    <div className="rounded-2xl bg-gray-50 p-4 sm:p-5">
+
+                      <div className="mb-5 flex items-center gap-3">
+
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+
+                          <BusIcon
+                            size={20}
+                            className="text-teal-700"
+                          />
+
+                        </div>
+
+                        <div>
+
+                          <h3 className="font-bold text-gray-900">
+                            Trip Details
+                          </h3>
+
+                          <p className="text-xs text-gray-500">
+                            Your selected trip
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                      <div className="space-y-3">
+
+                        {/* BUS */}
+
+                        <div>
+
+                          <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+                            BUS NUMBER
+                          </label>
+
+                          <input
+                            disabled
+                            value={
+                              bookingBus.busNumber
+                            }
+                            className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+                          />
+
+                        </div>
+
+                        {/* DRIVER */}
+
+                        <div>
+
+                          <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+                            DRIVER PHONE
+                          </label>
+
+                          <input
+                            disabled
+                            value={
+                              bookingBus.driverPhone ||
+                              "Not available"
+                            }
+                            className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+                          />
+
+                        </div>
+
+                        {/* SEATS */}
+
+                        <div>
+
+                          <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+                            BOOKED SEAT
+                            {bookingSelectedSeats.length >
+                            1
+                              ? "S"
+                              : ""}
+                          </label>
+
+                          <input
+                            disabled
+                            value={bookingSelectedSeats.join(
+                              ", "
+                            )}
+                            className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+                          />
+
+                        </div>
+
+                        {/* ROUTE */}
+
+                        <div>
+
+                          <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+                            ROUTE
+                          </label>
+
+                          <input
+                            disabled
+                            value={`${bookingBus.pickup} → ${bookingBus.dropoff}`}
+                            className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+                          />
+
+                        </div>
+
+                        {/* DATE */}
+
+                        <div>
+
+                          <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+                            TRAVEL DATE
+                          </label>
+
+                          <div className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-gray-100 px-3">
+
+                            <Calendar
+                              size={15}
+                              className="text-teal-700"
+                            />
+
+                            <span className="text-sm font-semibold text-gray-600">
+                              {formatShortDate(
+                                bookingBus.date
+                              )}
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                        {/* DEPARTURE */}
+
+                        <div>
+
+                          <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+                            DEPARTURE
+                          </label>
+
+                          <div className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-gray-100 px-3">
+
+                            <Clock
+                              size={15}
+                              className="text-teal-700"
+                            />
+
+                            <span className="text-sm font-semibold text-gray-600">
+                              {bookingBus.departure}
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                        {/* FARE */}
+
+                        <div className="border-t border-gray-200 pt-3">
+
+                          <div className="flex items-center justify-between">
+
+                            <span className="text-sm font-medium text-gray-500">
+                              Total Fare
+                            </span>
+
+                            <span className="text-xl font-bold text-teal-700">
+                              {formatPKR(
+                                totalFare
+                              )}
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+                  )}
+
+                </div>
+
+              </div>
+
+              {/* FOOTER */}
+
+              <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-gray-100 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+
+                <p className="text-center text-xs text-gray-400 sm:text-left">
+                  Your information will be securely sent
+                  to Haikal Tours.
+                </p>
+
+                <div className="flex w-full gap-3 sm:w-auto">
+
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={
+                      closeBookingModal
+                    }
+                    className="flex-1 rounded-xl border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      !passenger.name.trim() ||
+                      !passenger.email.trim() ||
+                      !passenger.phone.trim() ||
+                      bookingSelectedSeats.length ===
+                        0 ||
+                      submitting
+                    }
+                    onClick={
+                      handleConfirm
+                    }
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#063d43] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#052f34] disabled:cursor-not-allowed disabled:bg-gray-300 sm:flex-none"
+                  >
+
+                    {submitting ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
+                        Sending Request...
+                      </>
+                    ) : (
+                      <>
+                        Confirm Booking
+
+                        <ArrowRight
+                          size={17}
+                        />
+                      </>
+                    )}
+
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      )}
 
     </main>
   );

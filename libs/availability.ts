@@ -5,7 +5,7 @@ export type SeatStatus =
 
 export type Seat = {
    seatNumber: string;
-  status: "available" | "booked"
+   status: "available" | "pending" | "booked";
 };
 
 export type BusAvailability = {
