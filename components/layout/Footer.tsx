@@ -47,7 +47,7 @@ export default function Footer() {
               href="/tours"
               className="block hover:text-white"
             >
-              Tours
+              Services
             </Link>
 
             <Link

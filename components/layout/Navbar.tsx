@@ -15,8 +15,8 @@ const navItems = [
     href: "/",
   },
   {
-    name: "Tours",
-    href: "/tours",
+    name: "Services",
+    href: "/services",
   },
   {
     name: "Destinations",
@@ -93,7 +93,7 @@ export default function Navbar() {
               onClick={() => setTourOpen(!tourOpen)}
               className="flex items-center gap-1 text-sm font-medium text-gray-700 transition hover:text-teal-700"
             >
-              Tours
+              Services
               <ChevronDown
                 size={15}
                 className={`transition ${
@@ -106,17 +106,17 @@ export default function Navbar() {
               <div className="absolute left-1/2 top-full mt-4 w-52 -translate-x-1/2 rounded-xl border border-gray-100 bg-white p-2 shadow-xl">
 
                 <Link
-                  href="/tours"
+                  href="/lugguage/service"
                   className="block rounded-lg px-4 py-3 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700"
                 >
-                  All Tours
+                  Luguage Services
                 </Link>
 
                 <Link
-                  href="/tours/adventure"
+                  href="/services/luguage"
                   className="block rounded-lg px-4 py-3 text-sm text-gray-700 hover:bg-teal-50 hover:text-teal-700"
                 >
-                  Adventure Tours
+                  Merchandise Services
                 </Link>
 
                 <Link

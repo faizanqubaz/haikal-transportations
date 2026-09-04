@@ -22,44 +22,44 @@ import AvailabilityResults from "@/components/avaialibility/AvailabilityResults"
 
 const destinations = [
   {
-    name: "Bali",
-    country: "Indonesia",
-    image: "/images/route-lagoon.jpg",
+    name: "Gilgit",
+    country: "Pakistan",
+    image: "/images/haikal.png",
   },
   {
     name: "Hunza",
     country: "Pakistan",
+    image: "/images/image.jpg",
+  },
+  {
+    name: "Ghakuch",
+    country: "Pakistan",
     image: "/images/route-lagoon.jpg",
   },
   {
-    name: "Maldives",
-    country: "Maldives",
-    image: "/images/route-lagoon.jpg",
-  },
-  {
-    name: "Dubai",
-    country: "UAE",
+    name: "Sost",
+    country: "Pakistan",
     image: "/images/route-lagoon.jpg",
   },
 ];
 
 const tours = [
   {
-    title: "Bali Island Escape",
+    title: "Aliabad Hunza",
     location: "Bali, Indonesia",
     duration: "7 Days / 6 Nights",
     price: "$899",
     image: "/images/route-lagoon.jpg",
   },
   {
-    title: "Hunza Valley Adventure",
+    title: "Sost Gojal Tours",
     location: "Gilgit-Baltistan, Pakistan",
     duration: "6 Days / 5 Nights",
     price: "$499",
     image: "/images/route-lagoon.jpg",
   },
   {
-    title: "Maldives Luxury Escape",
+    title: "Gilgit Tours",
     location: "Maldives",
     duration: "5 Days / 4 Nights",
     price: "$1,299",
