@@ -2,22 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 
 import Driver from "@/models/Driver";
 import { connectDB } from "@/libs/mongodb";
-
+type Params = {
+  params: Promise<{
+    id: string;
+  }>;
+};
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: Params
 ) {
   await connectDB();
   const body = await req.json();
-  const driver = await Driver.findByIdAndUpdate(params.id, body, { new: true });
+  const driver = await Driver.findByIdAndUpdate((await params).id, body, { new: true });
   return NextResponse.json({ driver });
 }
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: Params
 ) {
   await connectDB();
-  await Driver.findByIdAndDelete(params.id);
+  await Driver.findByIdAndDelete((await params).id);
   return NextResponse.json({ success: true });
 }
