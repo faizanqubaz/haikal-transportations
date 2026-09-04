@@ -44,7 +44,7 @@ export async function GET() {
       route: g.route,
       departure: g.travelTime || "-",
       bookedSeats: g.bookedSeats,
-      capacity: bus?.capacity || 40,
+      capacity: bus?.pickup || 40,
     };
   });
 

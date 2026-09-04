@@ -20,6 +20,7 @@ import {
   Bell,
   Search,
   ChevronRight,
+  ChevronLeft,
   Clock3,
   ArrowUpRight,
   CircleCheck,
@@ -52,7 +53,7 @@ type Booking = {
   bus?: { busNumber: string } | null;
   seat?: string;
   travelTime?: string;
-  status: "pending" | "confirmed" | "cancelled";
+  status: "pending" | "approved" | "rejected";
   emailSent: boolean;
   whatsappSent: boolean;
 };
@@ -72,14 +73,47 @@ type Trip = {
   capacity: number;
 };
 
+type NotificationBooking = {
+  _id: string;
+  bookingRef: string;
+  passengerName: string;
+  passengerEmail?: string;
+  passengerPhone: string;
+  route: string;
+  bus?: {
+    busNumber?: string;
+  } | null;
+  seats?: string[];
+  travelDate?: string;
+  travelTime?: string;
+  status: "pending" | "approved" | "rejected";
+};
+
+type AdminNotification = {
+  _id: string;
+  type: "booking";
+  title: string;
+  message: string;
+  bookingId: NotificationBooking | null;
+  read: boolean;
+  createdAt: string;
+};
+
+const BOOKINGS_PER_PAGE = 7;
+
 export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [stats, setStats] = useState<Stats | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [upcomingTrips, setUpcomingTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedNotification, setSelectedNotification] =
+    useState<AdminNotification | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const loadData = useCallback(async () => {
     try {
@@ -102,31 +136,83 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   }, []);
+  const loadNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/notifications", {
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch notifications");
+      }
+
+      const data = await res.json();
+
+      setNotifications(data.notifications || []);
+      setNotificationCount(data.count || 0);
+    } catch (error) {
+      console.error(
+        "Failed to load notifications:",
+        error
+      );
+    }
+  }, []);
 
   useEffect(() => {
     loadData();
-    // Keep the dashboard fresh without a manual refresh
-    const interval = setInterval(loadData, 30000);
-    return () => clearInterval(interval);
-  }, [loadData]);
+    loadNotifications();
 
-  async function handleBookingAction(id: string, action: "approve" | "reject") {
-    setActioningId(id);
-    try {
-      const res = await fetch(`/api/bookings/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      if (!res.ok) throw new Error("Request failed");
-      await loadData();
-    } catch (err) {
-      console.error(`Failed to ${action} booking:`, err);
-      alert(`Something went wrong trying to ${action} this booking. Please try again.`);
-    } finally {
-      setActioningId(null);
+    const interval = setInterval(() => {
+      loadData();
+      loadNotifications();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [loadData, loadNotifications]);
+
+  async function handleBookingAction(
+  id: string,
+  action: "approve" | "reject"
+) {
+  setActioningId(id);
+
+  try {
+    const res = await fetch(`/api/admin/bookings/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status: action === "approve" ? "approved" : "rejected",
+      }),
+    });
+
+    const data = await res.json();
+console.log('data',data)
+    if (!res.ok) {
+      throw new Error(data.error || "Request failed");
     }
+
+    // Remove selected notification from UI
+    setSelectedNotification(null);
+
+    // Refresh everything
+    await Promise.all([
+      loadData(),
+      loadNotifications(),
+    ]);
+
+  } catch (err) {
+    console.error(`Failed to ${action} booking:`, err);
+
+    alert(
+      `Something went wrong trying to ${action} this booking. Please try again.`
+    );
+  } finally {
+    setActioningId(null);
   }
+}
+
 
   const statCards = [
     {
@@ -152,7 +238,28 @@ export default function AdminDashboard() {
   ];
 
   const pendingBookings = bookings.filter((b) => b.status === "pending");
-  const recentBookings = bookings.slice(0, 6);
+
+  // ---- Pagination for Recent Bookings ----
+  const totalPages = Math.max(1, Math.ceil(bookings.length / BOOKINGS_PER_PAGE));
+
+  // Keep currentPage in range if bookings list shrinks/grows (e.g. after polling)
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const startIndex = (currentPage - 1) * BOOKINGS_PER_PAGE;
+  const paginatedBookings = bookings.slice(
+    startIndex,
+    startIndex + BOOKINGS_PER_PAGE
+  );
+
+  function goToPage(page: number) {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  }
+  // -----------------------------------------
 
   return (
     <div className="min-h-screen bg-[#f7f9f9]">
@@ -208,10 +315,9 @@ export default function AdminDashboard() {
                   className={`
                     group flex items-center gap-3 rounded-xl
                     px-3 py-3 text-sm font-medium transition
-                    ${
-                      item.name === "Dashboard"
-                        ? "bg-teal-50 font-bold text-teal-700"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-teal-700"
+                    ${item.name === "Dashboard"
+                      ? "bg-teal-50 font-bold text-teal-700"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-teal-700"
                     }
                   `}
                 >
@@ -297,10 +403,17 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:bg-gray-50">
+            <button
+              type="button"
+              onClick={() => setShowNotifications(true)}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:bg-gray-50"
+            >
               <Bell size={18} />
-              {pendingBookings.length > 0 && (
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+
+              {notificationCount > 0 && (
+                <span className="absolute -right-2 -top-2 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-black text-white shadow-md">
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </span>
               )}
             </button>
 
@@ -449,58 +562,75 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {!loading && recentBookings.length === 0 && (
+                    {!loading && paginatedBookings.length === 0 && (
                       <tr>
                         <td colSpan={5} className="px-5 py-8 text-center text-sm text-gray-400">
                           No bookings yet.
                         </td>
                       </tr>
                     )}
-                    {recentBookings.map((booking) => (
-                      <tr key={booking._id} className="border-b border-gray-50 last:border-0">
+                    {paginatedBookings.map((booking) => (
+                      <tr
+                        key={booking._id}
+                        className="cursor-pointer border-b border-gray-50 transition last:border-0 hover:bg-teal-50/40"
+                      >
                         <td className="px-5 py-4">
-                          <p className="text-xs font-bold text-gray-800">{booking.bookingRef}</p>
-                          <p className="mt-1 text-[11px] text-gray-400">
-                            {booking.travelTime || "-"}
-                          </p>
+                          <Link
+                            href={`/admin/bookings/${booking._id}`}
+                            className="block"
+                          >
+                            <p className="text-xs font-bold text-gray-800">{booking.bookingRef}</p>
+                            <p className="mt-1 text-[11px] text-gray-400">
+                              {booking.travelTime || "-"}
+                            </p>
+                          </Link>
                         </td>
                         <td className="px-5 py-4">
-                          <p className="text-sm font-semibold text-gray-800">
+                          <Link
+                            href={`/admin/bookings/${booking._id}`}
+                            className="block text-sm font-semibold text-gray-800 hover:text-teal-700 hover:underline"
+                          >
                             {booking.passengerName}
-                          </p>
+                          </Link>
                         </td>
                         <td className="px-5 py-4">
-                          <p className="max-w-[170px] truncate text-xs text-gray-600">
-                            {booking.route}
-                          </p>
+                          <Link href={`/admin/bookings/${booking._id}`} className="block">
+                            <p className="max-w-[170px] truncate text-xs text-gray-600">
+                              {booking.route}
+                            </p>
+                          </Link>
                         </td>
                         <td className="px-5 py-4">
-                          <p className="text-xs font-bold text-gray-700">
-                            {booking.bus?.busNumber || "—"}
-                          </p>
-                          <p className="text-[11px] text-gray-400">
-                            Seat {booking.seat || "-"}
-                          </p>
+                          <Link href={`/admin/bookings/${booking._id}`} className="block">
+                            <p className="text-xs font-bold text-gray-700">
+                              {booking.bus?.busNumber || "—"}
+                            </p>
+                            <p className="text-[11px] text-gray-400">
+                              Seat {booking.seat || "-"}
+                            </p>
+                          </Link>
                         </td>
                         <td className="px-5 py-4">
-                          {booking.status === "confirmed" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-bold text-green-600">
-                              <CircleCheck size={12} />
-                              Confirmed
-                            </span>
-                          )}
-                          {booking.status === "pending" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-600">
-                              <Clock3 size={12} />
-                              Pending
-                            </span>
-                          )}
-                          {booking.status === "cancelled" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
-                              <CircleAlert size={12} />
-                              Cancelled
-                            </span>
-                          )}
+                          <Link href={`/admin/bookings/${booking._id}`} className="block">
+                            {booking.status === "approved" && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-bold text-green-600">
+                                <CircleCheck size={12} />
+                                Confirmed
+                              </span>
+                            )}
+                            {booking.status === "pending" && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-600">
+                                <Clock3 size={12} />
+                                Pending
+                              </span>
+                            )}
+                            {booking.status === "rejected" && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600">
+                                <CircleAlert size={12} />
+                                Cancelled
+                              </span>
+                            )}
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -510,14 +640,18 @@ export default function AdminDashboard() {
 
               {/* MOBILE BOOKINGS */}
               <div className="divide-y divide-gray-100 md:hidden">
-                {recentBookings.map((booking) => (
-                  <div key={booking._id} className="p-4">
+                {paginatedBookings.map((booking) => (
+                  <Link
+                    key={booking._id}
+                    href={`/admin/bookings/${booking._id}`}
+                    className="block p-4 transition hover:bg-teal-50/40"
+                  >
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-bold text-gray-400">{booking.bookingRef}</p>
                         <p className="mt-1 font-bold text-gray-900">{booking.passengerName}</p>
                       </div>
-                      {booking.status === "confirmed" && (
+                      {booking.status === "approved" && (
                         <span className="rounded-full bg-green-50 px-2 py-1 text-[10px] font-bold text-green-600">
                           Confirmed
                         </span>
@@ -527,7 +661,7 @@ export default function AdminDashboard() {
                           Pending
                         </span>
                       )}
-                      {booking.status === "cancelled" && (
+                      {booking.status === "rejected" && (
                         <span className="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600">
                           Cancelled
                         </span>
@@ -539,9 +673,46 @@ export default function AdminDashboard() {
                         {booking.bus?.busNumber || "—"} · {booking.seat || "-"}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
+
+              {/* PAGINATION CONTROLS */}
+              {bookings.length > 0 && (
+                <div className="flex flex-col items-center justify-between gap-3 border-t border-gray-100 px-5 py-4 sm:flex-row">
+                  <p className="text-xs text-gray-400">
+                    Showing{" "}
+                    <span className="font-bold text-gray-600">
+                      {startIndex + 1}-{Math.min(startIndex + BOOKINGS_PER_PAGE, bookings.length)}
+                    </span>{" "}
+                    of <span className="font-bold text-gray-600">{bookings.length}</span> bookings
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <ChevronLeft size={15} />
+                    </button>
+
+                    <span className="px-2 text-xs font-bold text-gray-600">
+                      Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* UPCOMING TRIPS */}
@@ -615,7 +786,313 @@ export default function AdminDashboard() {
               <QuickAction href="/admin/settings" icon={Settings} label="Settings" />
             </div>
           </div>
+
+          
         </div>
+
+        {/* NOTIFICATION MODAL */}
+{showNotifications && (
+  <div
+    className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/40 p-4 pt-20 backdrop-blur-sm"
+    onClick={() => setShowNotifications(false)}
+  >
+    <div
+      className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* HEADER */}
+      <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+        <div>
+          <h3 className="text-lg font-black text-gray-900">
+            Booking Notifications
+          </h3>
+
+          <p className="mt-1 text-xs text-gray-400">
+            {notificationCount} pending request
+            {notificationCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowNotifications(false)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* NOTIFICATIONS */}
+      <div className="max-h-[500px] overflow-y-auto">
+        {notifications.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+              <Bell size={24} className="text-gray-400" />
+            </div>
+
+            <p className="mt-4 text-sm font-bold text-gray-700">
+              No new notifications
+            </p>
+
+            <p className="mt-1 text-xs text-gray-400">
+              New booking requests will appear here.
+            </p>
+          </div>
+        ) : (
+          notifications.map((notification) => (
+            <button
+              key={notification._id}
+              type="button"
+              onClick={() => {
+                setSelectedNotification(notification);
+                setShowNotifications(false);
+              }}
+              className="flex w-full gap-4 border-b border-gray-100 p-5 text-left transition hover:bg-red-50"
+            >
+              {/* ICON */}
+              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50">
+                <Bell size={19} className="text-red-500" />
+
+                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
+              </div>
+
+              {/* CONTENT */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-bold text-gray-900">
+                    {notification.title}
+                  </p>
+
+                  <span className="shrink-0 rounded-full bg-red-100 px-2 py-1 text-[9px] font-black uppercase text-red-600">
+                    New
+                  </span>
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  {notification.message}
+                </p>
+
+                {notification.bookingId && (
+                  <p className="mt-2 text-[10px] font-bold text-teal-700">
+                    Booking #{notification.bookingId.bookingRef}
+                  </p>
+                )}
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* PENDING BOOKING REQUEST MODAL */}
+{selectedNotification?.bookingId && (
+  <div
+    className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    onClick={() => setSelectedNotification(null)}
+  >
+    <div
+      className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* HEADER */}
+      <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
+              <CalendarCheck size={19} className="text-red-500" />
+            </div>
+
+            <div>
+              <h3 className="font-black text-gray-900">
+                Pending Booking Request
+              </h3>
+
+              <p className="text-xs text-gray-400">
+                Review and approve this reservation
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSelectedNotification(null)}
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* BOOKING DETAILS */}
+      <div className="space-y-4 p-6">
+
+        {/* BOOKING REF */}
+        <div className="rounded-2xl bg-gray-50 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            Booking Reference
+          </p>
+
+          <p className="mt-1 text-lg font-black text-teal-700">
+            {selectedNotification.bookingId.bookingRef}
+          </p>
+        </div>
+
+        {/* PASSENGER */}
+        <div className="rounded-2xl border border-gray-100 p-4">
+          <p className="mb-3 text-xs font-black uppercase tracking-wider text-gray-400">
+            Passenger
+          </p>
+
+          <div className="space-y-2">
+            <div className="flex justify-between gap-4">
+              <span className="text-sm text-gray-400">Name</span>
+              <span className="text-sm font-bold text-gray-900">
+                {selectedNotification.bookingId.passengerName}
+              </span>
+            </div>
+
+            <div className="flex justify-between gap-4">
+              <span className="text-sm text-gray-400">Phone</span>
+              <span className="text-sm font-bold text-gray-900">
+                {selectedNotification.bookingId.passengerPhone}
+              </span>
+            </div>
+
+            {selectedNotification.bookingId.passengerEmail && (
+              <div className="flex justify-between gap-4">
+                <span className="text-sm text-gray-400">Email</span>
+                <span className="max-w-[250px] truncate text-sm font-bold text-gray-900">
+                  {selectedNotification.bookingId.passengerEmail}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* TRIP */}
+        <div className="rounded-2xl border border-gray-100 p-4">
+          <p className="mb-3 text-xs font-black uppercase tracking-wider text-gray-400">
+            Trip Details
+          </p>
+
+          <div className="space-y-3">
+
+            <div className="flex items-center gap-3">
+              <MapPin size={17} className="text-teal-700" />
+
+              <div>
+                <p className="text-[10px] text-gray-400">Route</p>
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedNotification.bookingId.route}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Bus size={17} className="text-teal-700" />
+
+              <div>
+                <p className="text-[10px] text-gray-400">Bus</p>
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedNotification.bookingId.bus?.busNumber || "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Clock3 size={17} className="text-teal-700" />
+
+              <div>
+                <p className="text-[10px] text-gray-400">Departure</p>
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedNotification.bookingId.travelDate
+                    ? new Date(
+                        selectedNotification.bookingId.travelDate
+                      ).toLocaleDateString()
+                    : "—"}
+
+                  {" · "}
+
+                  {selectedNotification.bookingId.travelTime || "—"}
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* SEATS */}
+        <div className="rounded-2xl bg-teal-50 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-teal-600">
+            Selected Seats
+          </p>
+
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(selectedNotification.bookingId.seats || []).map((seat) => (
+              <span
+                key={seat}
+                className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-black text-white"
+              >
+                Seat {seat}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="grid grid-cols-2 gap-3 pt-2">
+
+          <button
+            type="button"
+            disabled={
+              actioningId === selectedNotification.bookingId._id
+            }
+            onClick={() =>
+              handleBookingAction(
+                selectedNotification.bookingId!._id,
+                "reject"
+              )
+            }
+            className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+          >
+            {actioningId === selectedNotification.bookingId._id ? (
+              <Loader2 size={17} className="animate-spin" />
+            ) : (
+              <X size={17} />
+            )}
+
+            Reject Booking
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              actioningId === selectedNotification.bookingId._id
+            }
+            onClick={() =>
+              handleBookingAction(
+                selectedNotification.bookingId!._id,
+                "approve"
+              )
+            }
+            className="flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-teal-800 disabled:opacity-50"
+          >
+            {actioningId === selectedNotification.bookingId._id ? (
+              <Loader2 size={17} className="animate-spin" />
+            ) : (
+              <Check size={17} />
+            )}
+
+            Approve Booking
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+    </div>
+  </div>
+)}
       </main>
     </div>
   );

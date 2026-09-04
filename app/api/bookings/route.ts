@@ -3,6 +3,7 @@ import { connectDB } from "@/libs/mongodb";
 import Booking from "@/models/Booking";
 import Bus from "@/models/Bus";
 import { NextRequest, NextResponse } from "next/server";
+import Notification from "@/models/Notification";
 
 export async function POST(req: NextRequest) {
   const session = await mongoose.startSession();
@@ -190,6 +191,34 @@ export async function POST(req: NextRequest) {
         "BOOKING CREATED INSIDE TRANSACTION:",
         createdBooking._id
       );
+
+      // --------------------------------------------
+      // CREATE ADMIN NOTIFICATION
+      // --------------------------------------------
+
+      await Notification.create(
+        [
+          {
+            type: "booking",
+
+            title: "New Booking Request",
+
+            message: `${passenger.name} requested ${selectedSeats.length
+              } seat${selectedSeats.length > 1 ? "s" : ""} on ${bus.busNumber
+              }`,
+
+            bookingId: createdBooking._id,
+
+            read: false,
+          },
+        ],
+        { session }
+      );
+
+      console.log(
+        "ADMIN NOTIFICATION CREATED:",
+        createdBooking._id
+      );
     });
 
     // ============================================
@@ -279,5 +308,41 @@ export async function POST(req: NextRequest) {
     );
   } finally {
     await session.endSession();
+  }
+}
+
+
+
+export async function GET() {
+  try {
+    await connectDB();
+
+    const bookings = await Booking.find({})
+      .populate("bus", "busNumber route")
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
+
+    return NextResponse.json({
+      success: true,
+      bookings,
+    });
+  } catch (error) {
+    console.error(
+      "GET BOOKINGS ERROR:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Unable to fetch bookings",
+        bookings: [],
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

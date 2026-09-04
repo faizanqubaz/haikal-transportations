@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -36,6 +37,12 @@ type BookingResponse = {
 
 export default function AvailabilityCard({ bus }: Props) {
   const [showSeats, setShowSeats] = useState(false);
+
+  // Latest bus data from MongoDB
+  const [currentBus, setCurrentBus] = useState<BusAvailability>(bus);
+
+  const [loadingSeats, setLoadingSeats] = useState(false);
+
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
@@ -55,7 +62,62 @@ export default function AvailabilityCard({ bus }: Props) {
     phone: "",
   });
 
-  const totalFare = bus.price * selectedSeats.length;
+  const totalFare = currentBus.price * selectedSeats.length;
+
+  // --------------------------------------------------
+  // LOAD LATEST SEAT DATA
+  // --------------------------------------------------
+
+
+const handleViewSeats = async () => {
+  if (showSeats) {
+    setShowSeats(false);
+    return;
+  }
+
+  try {
+    setLoadingSeats(true);
+    setSubmitError(null);
+    setSelectedSeats([]);
+
+    console.log("FETCHING LATEST BUS:", bus.id);
+
+    const res = await fetch(`/api/busses/${bus.id}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    console.log("LATEST BUS RESPONSE:", data);
+
+    if (!res.ok) {
+      throw new Error(
+        data.error || "Unable to load latest seat availability."
+      );
+    }
+
+    if (!data.bus) {
+      throw new Error("Bus data was not returned.");
+    }
+
+    setCurrentBus(data.bus);
+    setSelectedSeats([]);
+    setShowSeats(true);
+  } catch (error) {
+    console.error("VIEW_SEATS_ERROR:", error);
+
+    setSubmitError(
+      error instanceof Error
+        ? error.message
+        : "Unable to load seat availability."
+    );
+  } finally {
+    setLoadingSeats(false);
+  }
+};
+
+
 
   // --------------------------------------------------
   // CONTINUE TO BOOKING MODAL
@@ -103,7 +165,7 @@ export default function AvailabilityCard({ bus }: Props) {
             phone: passenger.phone.trim(),
           },
 
-          busId: bus.id,
+          busId: currentBus.id,
 
           seats: selectedSeats,
         }),
@@ -117,14 +179,12 @@ export default function AvailabilityCard({ bus }: Props) {
         );
       }
 
-      // Save booking reference if backend sends one
       if (data.booking?.bookingReference) {
         setBookingReference(data.booking.bookingReference);
       } else if (data.booking?._id) {
         setBookingReference(data.booking._id);
       }
 
-      // Show pending screen
       setSubmitted(true);
     } catch (error) {
       console.error("BOOKING ERROR:", error);
@@ -156,6 +216,9 @@ export default function AvailabilityCard({ bus }: Props) {
 
     setSelectedSeats([]);
     setSubmitError(null);
+
+    // Close seat map as well
+    setShowSeats(false);
   };
 
   return (
@@ -172,35 +235,29 @@ export default function AvailabilityCard({ bus }: Props) {
         <div className="relative h-52 overflow-hidden sm:h-64">
           <img
             src={haikal_bus}
-            alt={bus.busNumber}
+            alt={currentBus.busNumber}
             className="h-full w-full object-cover"
           />
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-          {/* Bus number */}
-
           <div className="absolute left-5 top-5 rounded-full bg-white px-4 py-2 text-xs font-bold text-gray-900 shadow-lg">
-            {bus.busNumber}
+            {currentBus.busNumber}
           </div>
-
-          {/* Available seats */}
 
           <div className="absolute bottom-5 right-5 flex items-center gap-2 rounded-full bg-teal-700 px-4 py-2 text-xs font-bold text-white">
             <Users size={14} />
 
-            {bus.availableSeats} seats available
+            {currentBus.availableSeats} seats available
           </div>
-
-          {/* Bus name */}
 
           <div className="absolute bottom-5 left-5 text-white">
             <p className="text-xs font-medium text-white/70">
-              {bus.company}
+              {currentBus.company}
             </p>
 
             <h3 className="mt-1 text-xl font-bold sm:text-2xl">
-              {bus.route}
+              {currentBus.route}
             </h3>
           </div>
         </div>
@@ -219,13 +276,13 @@ export default function AvailabilityCard({ bus }: Props) {
               </p>
 
               <p className="mt-1 text-lg font-bold text-gray-900">
-                {bus.departure}
+                {currentBus.departure}
               </p>
 
               <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
                 <MapPin size={12} />
 
-                {bus.pickup}
+                {currentBus.pickup}
               </div>
             </div>
 
@@ -237,7 +294,7 @@ export default function AvailabilityCard({ bus }: Props) {
               </p>
 
               <p className="mt-1 text-lg font-bold text-gray-900">
-                {bus.duration}
+                {currentBus.duration}
               </p>
 
               <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
@@ -255,13 +312,13 @@ export default function AvailabilityCard({ bus }: Props) {
               </p>
 
               <p className="mt-1 text-lg font-bold text-gray-900">
-                {bus.arrival}
+                {currentBus.arrival}
               </p>
 
               <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
                 <MapPin size={12} />
 
-                {bus.dropoff}
+                {currentBus.dropoff}
               </div>
             </div>
           </div>
@@ -277,17 +334,22 @@ export default function AvailabilityCard({ bus }: Props) {
               </p>
 
               <p className="text-2xl font-bold text-gray-900">
-                Rs. {bus.price.toLocaleString()}
+                Rs. {currentBus.price.toLocaleString()}
               </p>
             </div>
 
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setShowSeats(!showSeats)}
-                className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-teal-700 hover:text-teal-700"
+                onClick={handleViewSeats}
+                disabled={loadingSeats}
+                className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-teal-700 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {showSeats ? "Hide seats" : "View seats"}
+                {loadingSeats
+                  ? "Loading seats..."
+                  : showSeats
+                    ? "Hide seats"
+                    : "View seats"}
               </button>
 
               <button
@@ -310,7 +372,10 @@ export default function AvailabilityCard({ bus }: Props) {
           {showSeats && (
             <div className="mt-6 border-t border-gray-100 pt-6">
               <SeatMap
-                seats={bus.seats}
+                key={`${currentBus.id}-${currentBus.seats
+                  .map((seat) => `${seat.seatNumber}-${seat.status}`)
+                  .join("|")}`}
+                seats={currentBus.seats}
                 onSeatChange={setSelectedSeats}
               />
             </div>
@@ -340,13 +405,9 @@ export default function AvailabilityCard({ bus }: Props) {
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
             >
-              {/* Top decoration */}
-
               <div className="h-2 bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-500" />
 
               <div className="p-6 text-center sm:p-8">
-                {/* Success icon */}
-
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-teal-50">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-100">
                     <CheckCircle2
@@ -356,10 +417,8 @@ export default function AvailabilityCard({ bus }: Props) {
                   </div>
                 </div>
 
-                {/* Heading */}
-
                 <p className="mt-6 text-xs font-bold tracking-[0.2em] text-teal-700">
-                  HAikal TOURS
+                  HAIKAL TOURS
                 </p>
 
                 <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
@@ -371,8 +430,6 @@ export default function AvailabilityCard({ bus }: Props) {
                   request has been successfully received.
                 </p>
 
-                {/* Pending status */}
-
                 <div className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full bg-amber-50 px-4 py-2">
                   <Clock
                     size={16}
@@ -383,8 +440,6 @@ export default function AvailabilityCard({ bus }: Props) {
                     Booking Pending
                   </span>
                 </div>
-
-                {/* Booking reference */}
 
                 {bookingReference && (
                   <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
@@ -398,8 +453,6 @@ export default function AvailabilityCard({ bus }: Props) {
                   </div>
                 )}
 
-                {/* Trip summary */}
-
                 <div className="mt-5 rounded-2xl bg-gray-50 p-5 text-left">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
@@ -411,16 +464,14 @@ export default function AvailabilityCard({ bus }: Props) {
 
                     <div>
                       <p className="text-sm font-bold text-gray-900">
-                        {bus.busNumber}
+                        {currentBus.busNumber}
                       </p>
 
                       <p className="text-xs text-gray-500">
-                        {bus.company}
+                        {currentBus.company}
                       </p>
                     </div>
                   </div>
-
-                  {/* Route */}
 
                   <div className="mt-5 flex items-center gap-3">
                     <MapPin
@@ -434,12 +485,10 @@ export default function AvailabilityCard({ bus }: Props) {
                       </p>
 
                       <p className="text-sm font-bold text-gray-900">
-                        {bus.pickup} → {bus.dropoff}
+                        {currentBus.pickup} → {currentBus.dropoff}
                       </p>
                     </div>
                   </div>
-
-                  {/* Seats */}
 
                   <div className="mt-4 flex items-center gap-3">
                     <Users
@@ -458,8 +507,6 @@ export default function AvailabilityCard({ bus }: Props) {
                     </div>
                   </div>
 
-                  {/* Departure */}
-
                   <div className="mt-4 flex items-center gap-3">
                     <CalendarDays
                       size={17}
@@ -472,12 +519,10 @@ export default function AvailabilityCard({ bus }: Props) {
                       </p>
 
                       <p className="text-sm font-bold text-gray-900">
-                        {bus.departure}
+                        {currentBus.departure}
                       </p>
                     </div>
                   </div>
-
-                  {/* Total */}
 
                   <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-4">
                     <span className="text-sm font-medium text-gray-500">
@@ -489,8 +534,6 @@ export default function AvailabilityCard({ bus }: Props) {
                     </span>
                   </div>
                 </div>
-
-                {/* Information */}
 
                 <div className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-left">
                   <Clock
@@ -505,15 +548,11 @@ export default function AvailabilityCard({ bus }: Props) {
                   </p>
                 </div>
 
-                {/* Secure */}
-
                 <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
                   <ShieldCheck size={14} />
 
                   Your booking information has been securely submitted.
                 </div>
-
-                {/* Done */}
 
                 <button
                   type="button"
@@ -525,18 +564,10 @@ export default function AvailabilityCard({ bus }: Props) {
               </div>
             </div>
           ) : (
-            /* ==================================================
-                BOOKING FORM
-            ================================================== */
-
             <div
               onClick={(e) => e.stopPropagation()}
               className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[90vh]"
             >
-              {/* ==================================================
-                  HEADER
-              ================================================== */}
-
               <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4 sm:px-7 sm:py-5">
                 <div>
                   <p className="text-xs font-bold tracking-[0.2em] text-teal-700">
@@ -558,16 +589,8 @@ export default function AvailabilityCard({ bus }: Props) {
                 </button>
               </div>
 
-              {/* ==================================================
-                  MODAL CONTENT
-              ================================================== */}
-
               <div className="overflow-y-auto p-5 sm:p-7">
                 <div className="grid gap-6 lg:grid-cols-2">
-                  {/* ==================================================
-                      PASSENGER INFORMATION
-                  ================================================== */}
-
                   <div>
                     <div className="mb-5">
                       <h3 className="text-lg font-bold text-gray-900">
@@ -580,8 +603,6 @@ export default function AvailabilityCard({ bus }: Props) {
                     </div>
 
                     <div className="space-y-4">
-                      {/* NAME */}
-
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">
                           Full Name
@@ -601,8 +622,6 @@ export default function AvailabilityCard({ bus }: Props) {
                           className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
                         />
                       </div>
-
-                      {/* EMAIL */}
 
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">
@@ -624,8 +643,6 @@ export default function AvailabilityCard({ bus }: Props) {
                         />
                       </div>
 
-                      {/* PHONE */}
-
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">
                           Phone Number
@@ -646,8 +663,6 @@ export default function AvailabilityCard({ bus }: Props) {
                         />
                       </div>
 
-                      {/* ERROR */}
-
                       {submitError && (
                         <div className="rounded-xl border border-red-100 bg-red-50 p-4">
                           <p className="text-sm font-medium text-red-700">
@@ -657,10 +672,6 @@ export default function AvailabilityCard({ bus }: Props) {
                       )}
                     </div>
                   </div>
-
-                  {/* ==================================================
-                      BOOKING INFORMATION
-                  ================================================== */}
 
                   <div className="rounded-2xl bg-gray-50 p-4 sm:p-5">
                     <div className="mb-5 flex items-center gap-3">
@@ -683,8 +694,6 @@ export default function AvailabilityCard({ bus }: Props) {
                     </div>
 
                     <div className="space-y-3">
-                      {/* BUS NUMBER */}
-
                       <div>
                         <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
                           BUS NUMBER
@@ -692,12 +701,10 @@ export default function AvailabilityCard({ bus }: Props) {
 
                         <input
                           disabled
-                          value={bus.busNumber}
+                          value={currentBus.busNumber}
                           className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
                         />
                       </div>
-
-                      {/* DRIVER PHONE */}
 
                       <div>
                         <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
@@ -706,12 +713,10 @@ export default function AvailabilityCard({ bus }: Props) {
 
                         <input
                           disabled
-                          value={bus.driverPhone}
+                          value={currentBus.driverPhone}
                           className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
                         />
                       </div>
-
-                      {/* SEATS */}
 
                       <div>
                         <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
@@ -726,8 +731,6 @@ export default function AvailabilityCard({ bus }: Props) {
                         />
                       </div>
 
-                      {/* ROUTE */}
-
                       <div>
                         <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
                           ROUTE
@@ -735,12 +738,10 @@ export default function AvailabilityCard({ bus }: Props) {
 
                         <input
                           disabled
-                          value={`${bus.pickup} → ${bus.dropoff}`}
+                          value={`${currentBus.pickup} → ${currentBus.dropoff}`}
                           className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
                         />
                       </div>
-
-                      {/* DEPARTURE */}
 
                       <div>
                         <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
@@ -754,12 +755,10 @@ export default function AvailabilityCard({ bus }: Props) {
                           />
 
                           <span className="text-sm font-semibold text-gray-600">
-                            {bus.departure}
+                            {currentBus.departure}
                           </span>
                         </div>
                       </div>
-
-                      {/* TOTAL */}
 
                       <div className="border-t border-gray-200 pt-3">
                         <div className="flex items-center justify-between">
@@ -776,10 +775,6 @@ export default function AvailabilityCard({ bus }: Props) {
                   </div>
                 </div>
               </div>
-
-              {/* ==================================================
-                  MODAL FOOTER
-              ================================================== */}
 
               <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-gray-100 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
                 <p className="text-center text-xs text-gray-400 sm:text-left">
@@ -831,3 +826,4 @@ export default function AvailabilityCard({ bus }: Props) {
     </>
   );
 }
+

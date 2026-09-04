@@ -1,58 +1,79 @@
+
+import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 
-import Booking from "@/models/Booking";
 import { connectDB } from "@/libs/mongodb";
-import { sendWhatsAppText } from "@/libs/whatsapp";
+import Bus from "@/models/Bus";
 
-
-// PATCH /api/bookings/:id  body: { action: "approve" | "reject" }
-// approve -> status=confirmed, schedules the email for 4 min from now,
-//            sends an immediate WhatsApp confirmation
-// reject  -> status=cancelled, sends an immediate WhatsApp notice
-export async function PATCH(
+export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  await connectDB();
-  const { action } = await req.json();
+  try {
+    await connectDB();
 
-  const booking = await Booking.findById(params.id);
-  if (!booking) {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  }
+    const { id } = await params;
 
-  if (action === "approve") {
-    booking.status = "confirmed";
-    booking.emailScheduledAt = new Date(Date.now() + 4 * 60 * 1000);
-    await booking.save();
+    console.log("FETCHING BUS BY ID:", id);
 
-    try {
-      await sendWhatsAppText(
-        booking.passengerPhone,
-        `Hi ${booking.passengerName}, your Haikal Tours booking ${booking.bookingRef} for ${booking.route} has been confirmed. A confirmation email is on its way. Safe travels!`
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: "Invalid bus ID" },
+        { status: 400 }
       );
-      booking.whatsappSent = true;
-      await booking.save();
-    } catch (err) {
-      console.error("WhatsApp send failed:", err);
-      // Booking stays confirmed even if WhatsApp fails - the dashboard shows
-      // whatsappSent=false so the admin can see/retry it.
     }
-  } else if (action === "reject") {
-    booking.status = "cancelled";
-    await booking.save();
 
-    try {
-      await sendWhatsAppText(
-        booking.passengerPhone,
-        `Hi ${booking.passengerName}, unfortunately your Haikal Tours booking ${booking.bookingRef} could not be confirmed. Please contact us for more details.`
+    const bus = await Bus.findById(id).lean();
+
+    if (!bus) {
+      return NextResponse.json(
+        { error: "Bus not found" },
+        { status: 404 }
       );
-    } catch (err) {
-      console.error("WhatsApp send failed:", err);
     }
-  } else {
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  }
 
-  return NextResponse.json({ booking });
+    const result = {
+      id: bus._id.toString(),
+      busNumber: bus.busNumber,
+      company: bus.company,
+      driverPhone: bus.driverPhone,
+
+      route: bus.route,
+      pickup: bus.pickup,
+      dropoff: bus.dropoff,
+
+      date: bus.date,
+
+      departure: bus.departure,
+      arrival: bus.arrival,
+      duration: bus.duration,
+
+      price: bus.price,
+      image: bus.image,
+
+      seats: bus.seats,
+
+      availableSeats: bus.seats.filter(
+        (seat: any) => seat.status === "available"
+      ).length,
+    };
+
+    console.log("BUS FOUND:", {
+      id: result.id,
+      busNumber: result.busNumber,
+      seats: result.seats,
+    });
+
+    return NextResponse.json({
+      bus: result,
+    });
+  } catch (error) {
+    console.error("GET_BUS_BY_ID_ERROR:", error);
+
+    return NextResponse.json(
+      { error: "Failed to fetch bus" },
+      { status: 500 }
+    );
+  }
 }
+
