@@ -2,24 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import Bus from "@/models/Bus";
 import { connectDB } from "@/libs/mongodb";
 
-export async function GET() {
-  try {
-    await connectDB();
+// export async function GET() {
+//   try {
+//     await connectDB();
 
-    const buses = await Bus.find({})
-      .sort({ createdAt: -1 })
-      .lean();
+//     const buses = await Bus.find({})
+//       .sort({ createdAt: -1 })
+//       .lean();
 
-    return NextResponse.json({ buses });
-  } catch (error) {
-    console.error("GET_BUSES_ERROR:", error);
+//     return NextResponse.json({ buses });
+//   } catch (error) {
+//     console.error("GET_BUSES_ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Failed to fetch buses" },
-      { status: 500 }
-    );
-  }
-}
+//     return NextResponse.json(
+//       { error: "Failed to fetch buses" },
+//       { status: 500 }
+//     );
+//   }
+// }
 
 export async function POST(req: NextRequest) {
   try {
@@ -190,4 +190,136 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+
+
+
+
+export async function GET(req: NextRequest) {
+  try {
+    await connectDB();
+
+    const { searchParams } = new URL(req.url);
+
+    const pickup = searchParams.get("pickup")?.trim();
+    const dropoff = searchParams.get("dropoff")?.trim();
+    const date = searchParams.get("date")?.trim();
+console
+    console.log("========================================");
+    console.log("BUS SEARCH REQUEST");
+    console.log("Pickup:", pickup);
+    console.log("Dropoff:", dropoff);
+    console.log("Date:", date);
+    console.log("========================================");
+
+    /*
+     * Build the MongoDB filter dynamically.
+     *
+     * IMPORTANT:
+     * pickup and dropoff are separate fields.
+     *
+     * Hunza -> Karachi:
+     * pickup  = Hunza
+     * dropoff = Karachi
+     *
+     * Karachi -> Hunza:
+     * pickup  = Karachi
+     * dropoff = Hunza
+     *
+     * These are NOT interchangeable.
+     */
+
+    const filter: Record<string, unknown> = {};
+
+    if (pickup) {
+      filter.pickup = {
+        $regex: `^${escapeRegex(pickup)}$`,
+        $options: "i",
+      };
+    }
+
+    if (dropoff) {
+      filter.dropoff = {
+        $regex: `^${escapeRegex(dropoff)}$`,
+        $options: "i",
+      };
+    }
+
+    if (date) {
+      filter.date = date;
+    }
+
+    console.log("MONGO FILTER:", JSON.stringify(filter, null, 2));
+
+    const buses = await Bus.find(filter)
+      .sort({ departure: 1 })
+      .lean();
+
+    console.log("BUSES FOUND:", buses.length);
+
+    buses.forEach((bus) => {
+      console.log({
+        id: bus._id.toString(),
+        busNumber: bus.busNumber,
+        pickup: bus.pickup,
+        dropoff: bus.dropoff,
+        date: bus.date,
+        departure: bus.departure,
+      });
+    });
+
+    /*
+     * Convert MongoDB documents into client-safe objects.
+     */
+
+    const results = buses.map((bus) => ({
+      _id: bus._id.toString(),
+
+      busNumber: bus.busNumber,
+      company: bus.company,
+      driverPhone: bus.driverPhone,
+
+      route: bus.route,
+
+      pickup: bus.pickup,
+      dropoff: bus.dropoff,
+
+      date: bus.date,
+
+      departure: bus.departure,
+      arrival: bus.arrival,
+      duration: bus.duration,
+
+      price: bus.price,
+
+      image: bus.image,
+
+      seats: bus.seats ?? [],
+    }));
+
+    return NextResponse.json({
+      buses: results,
+      count: results.length,
+    });
+  } catch (error) {
+    console.error("BUS_SEARCH_ERROR:", error);
+
+    return NextResponse.json(
+      {
+        error: "Failed to search buses",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+/*
+ * Prevent regex special characters from
+ * affecting the MongoDB search.
+ */
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
