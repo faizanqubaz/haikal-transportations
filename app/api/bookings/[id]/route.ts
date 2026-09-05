@@ -1,16 +1,11 @@
+import { sendBookingConfirmationEmail } from "@/libs/resend";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 
 import { connectDB } from "@/libs/mongodb";
 import Booking from "@/models/Booking";
 import Bus from "@/models/Bus";
-import Notification from "@/models/Notification";
 
-type Params = {
-  params: Promise<{
-    id: string;
-  }>;
-};
 const EDITABLE_FIELDS = [
   "passengerName",
   "passengerEmail",
@@ -22,8 +17,9 @@ const EDITABLE_FIELDS = [
   "status",
 ] as const;
 
-
-
+// ============================================================
+// GET /api/bookings/[id]
+// ============================================================
 
 export async function GET(
   req: NextRequest,
@@ -31,40 +27,43 @@ export async function GET(
 ) {
   try {
     await connectDB();
- 
+
     const { id } = await params;
- 
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: "Invalid booking id" },
         { status: 400 }
       );
     }
- 
+
     const booking = await Booking.findById(id)
       .populate("bus", "busNumber")
       .populate("driver", "name")
       .lean();
- 
+
     if (!booking) {
       return NextResponse.json(
         { error: "Booking not found" },
         { status: 404 }
       );
     }
- 
+
     return NextResponse.json({ booking });
   } catch (err) {
     console.error("GET /api/bookings/[id] failed:", err);
+
     return NextResponse.json(
       { error: "Failed to fetch booking" },
       { status: 500 }
     );
   }
 }
- 
 
-// DELETE /api/bookings/[id] — permanently remove a booking
+// ============================================================
+// DELETE /api/bookings/[id]
+// ============================================================
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -81,7 +80,6 @@ export async function DELETE(
       );
     }
 
-    // First find the booking
     const booking = await Booking.findById(id);
 
     if (!booking) {
@@ -91,7 +89,6 @@ export async function DELETE(
       );
     }
 
-    // Get the bus associated with this booking
     const bus = await Bus.findById(booking.bus);
 
     if (!bus) {
@@ -101,7 +98,6 @@ export async function DELETE(
       );
     }
 
-    // Release the seats
     const bookingSeats = booking.seats.map((seat: any) =>
       String(seat).trim()
     );
@@ -114,10 +110,7 @@ export async function DELETE(
       }
     });
 
-    // Save updated bus
     await bus.save();
-
-    // Now delete booking
     await Booking.findByIdAndDelete(id);
 
     return NextResponse.json({
@@ -136,7 +129,11 @@ export async function DELETE(
     );
   }
 }
- 
+
+// ============================================================
+// PATCH /api/bookings/[id]
+// ============================================================
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -155,9 +152,9 @@ export async function PATCH(
 
     const body = await req.json();
 
-    // -----------------------------------------
+    // ========================================================
     // VALIDATE STATUS
-    // -----------------------------------------
+    // ========================================================
 
     if (
       body.status &&
@@ -171,9 +168,9 @@ export async function PATCH(
       );
     }
 
-    // -----------------------------------------
+    // ========================================================
     // FIND BOOKING
-    // -----------------------------------------
+    // ========================================================
 
     const booking = await Booking.findById(id);
 
@@ -186,12 +183,12 @@ export async function PATCH(
       );
     }
 
-    // -----------------------------------------
+    // ========================================================
     // FIND BUS
-    // -----------------------------------------
+    // ========================================================
 
     const bus = await Bus.findById(booking.bus);
-
+   console.log('bus',bus)
     if (!bus) {
       return NextResponse.json(
         {
@@ -201,23 +198,24 @@ export async function PATCH(
       );
     }
 
-    // -----------------------------------------
+    // ========================================================
     // STATUS CHANGE
-    // -----------------------------------------
+    // ========================================================
 
-    if (body.status) {
-      const newStatus = body.status;
-
+const newStatus = body.status;
+console.log('statuschange',newStatus)
+    if (newStatus) {
+      
       const bookingSeats = booking.seats.map((seat: any) =>
         String(seat).trim()
       );
 
-      // ================================
+      // ======================================================
       // APPROVED
-      // ================================
+      // ======================================================
 
       if (newStatus === "approved") {
-        // Make sure seats exist
+        // Make sure all requested seats exist
         for (const seatNumber of bookingSeats) {
           const seat = bus.seats.find(
             (s: any) =>
@@ -233,7 +231,7 @@ export async function PATCH(
             );
           }
 
-          // Don't allow another booking to take it
+          // Seat must currently belong to this pending booking
           if (
             seat.status !== "pending" &&
             seat.status !== "booked"
@@ -247,7 +245,10 @@ export async function PATCH(
           }
         }
 
-        // pending → booked
+        // ====================================================
+        // Mark seats as booked
+        // ====================================================
+
         bus.seats.forEach((seat: any) => {
           const seatNumber = String(
             seat.seatNumber
@@ -259,14 +260,23 @@ export async function PATCH(
         });
 
         await bus.save();
+
+      console.log('booking2',booking)
+        booking.emailSent = false;
+console.log('booking3',booking)
+        booking.emailScheduledAt = new Date()
+console.log('booking4',booking)
+        console.log(
+          `EMAIL SCHEDULED FOR BOOKING ${booking.bookingRef}`,
+          booking.emailScheduledAt
+        );
       }
 
-      // ================================
+      // ======================================================
       // REJECTED
-      // ================================
+      // ======================================================
 
       if (newStatus === "rejected") {
-        // Release seats
         bus.seats.forEach((seat: any) => {
           const seatNumber = String(
             seat.seatNumber
@@ -278,11 +288,14 @@ export async function PATCH(
         });
 
         await bus.save();
+
+        // No confirmation email should be sent
+        booking.emailScheduledAt = undefined;
       }
 
-      // ================================
+      // ======================================================
       // PENDING
-      // ================================
+      // ======================================================
 
       if (newStatus === "pending") {
         bus.seats.forEach((seat: any) => {
@@ -296,14 +309,18 @@ export async function PATCH(
         });
 
         await bus.save();
+
+        // Cancel any previously scheduled email
+        booking.emailScheduledAt = undefined;
+        booking.emailSent = false;
       }
 
       booking.status = newStatus;
     }
 
-    // -----------------------------------------
+    // ========================================================
     // OTHER EDITABLE FIELDS
-    // -----------------------------------------
+    // ========================================================
 
     for (const field of EDITABLE_FIELDS) {
       if (
@@ -314,21 +331,83 @@ export async function PATCH(
       }
     }
 
+    // ========================================================
+    // SAVE BOOKING
+    // ========================================================
+
     await booking.save();
 
-    // -----------------------------------------
+    // ========================================================
     // RETURN UPDATED BOOKING
-    // -----------------------------------------
+    // ========================================================
 
     const updatedBooking = await Booking.findById(id)
       .populate("bus", "busNumber")
       .populate("driver", "name")
       .lean();
 
-    return NextResponse.json({
-      success: true,
-      booking: updatedBooking,
+    if (!updatedBooking) {
+      return NextResponse.json(
+        {
+          error: "Booking was updated but could not be retrieved",
+        },
+        { status: 500 }
+      );
+    }
+
+    // SEND CONFIRMATION EMAIL AFTER APPROVAL
+// ========================================================
+console.log('newStatus',newStatus)
+console.log('updatedBooking.passengerEmail',updatedBooking.passengerEmail)
+if (
+  newStatus === "approved" &&
+  updatedBooking.passengerEmail
+) {
+  try {
+    await sendBookingConfirmationEmail({
+      passengerName: updatedBooking.passengerName,
+      passengerEmail: updatedBooking.passengerEmail,
+      passengerPhone: updatedBooking.passengerPhone,
+      bookingRef: updatedBooking.bookingRef,
+      route: updatedBooking.route,
+      travelDate: updatedBooking.travelDate,
+      travelTime: updatedBooking.travelTime,
+      seats: updatedBooking.seats || [],
+      busNumber:
+        typeof updatedBooking.bus === "object" &&
+        updatedBooking.bus !== null
+          ? (updatedBooking.bus as any).busNumber
+          : undefined,
     });
+
+     // Email successfully sent
+    await Booking.findByIdAndUpdate(id, {
+      emailSent: true,
+    });
+
+    console.log(
+      `BOOKING CONFIRMATION EMAIL SENT: ${updatedBooking.bookingRef}`
+    );
+  } catch (emailError) {
+    console.error(
+      `BOOKING CONFIRMATION EMAIL FAILED: ${updatedBooking.bookingRef}`,
+      emailError
+    );
+
+    // Don't fail the booking approval just because email failed
+    await Booking.findByIdAndUpdate(id, {
+      emailSent: false,
+    });
+  }
+}
+
+return NextResponse.json({
+  success: true,
+  message: "Booking approved successfully",
+  booking: updatedBooking,
+});
+
+   
   } catch (err) {
     console.error(
       "PATCH /api/bookings/[id] failed:",
@@ -349,3 +428,4 @@ export async function PATCH(
     );
   }
 }
+

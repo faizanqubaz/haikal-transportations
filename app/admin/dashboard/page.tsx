@@ -240,7 +240,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await fetch(
-        `/api/admin/bookings/${id}`,
+        `/api/bookings/${id}`,
         {
           method: "PATCH",
           headers: {
@@ -257,12 +257,12 @@ export default function AdminDashboard() {
       );
 
       const data = await res.json();
-
+   console.log('datafrom',data)
       console.log(
         "BOOKING ACTION RESPONSE:",
         data
       );
-
+ 
       if (!res.ok) {
         throw new Error(
           data.error ||
@@ -275,6 +275,7 @@ export default function AdminDashboard() {
        */
       setSelectedNotification(null);
 
+      // SEND A CONFIRMATION EMAIL HERE 
       /*
        * Refresh dashboard and notifications
        */
@@ -282,6 +283,7 @@ export default function AdminDashboard() {
         loadData(),
         loadNotifications(),
       ]);
+
     } catch (err) {
       console.error(
         `Failed to ${action} booking:`,
@@ -1002,8 +1004,7 @@ export default function AdminDashboard() {
                 Accepting sends a
                 WhatsApp confirmation
                 immediately and emails
-                the passenger 4 minutes
-                later.
+                the passenger now.
               </p>
 
             </div>

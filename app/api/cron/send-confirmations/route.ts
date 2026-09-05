@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   await connectDB();
 
   const due = await Booking.find({
-    status: "confirmed",
+    status: "approved",
     emailSent: false,
     emailScheduledAt: { $lte: new Date() },
   });
