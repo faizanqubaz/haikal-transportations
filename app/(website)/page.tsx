@@ -441,7 +441,7 @@ export default function HomePage() {
 
             <div className="absolute inset-0 opacity-30">
               <img
-                src="/images/cta.jpg"
+                src="/images/image.jpg"
                 alt=""
                 className="h-full w-full object-cover"
               />

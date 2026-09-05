@@ -86,7 +86,7 @@ export default function SeatMap({
           transition
           sm:h-14
 
-          ${seat.status === "booked"
+          ${seat.status === "booked" || seat.status === "pending"
                     ? "cursor-not-allowed border-gray-200 bg-gray-200 text-gray-400"
                     : selected.includes(seat.seatNumber)
                       ? "border-teal-700 bg-teal-700 text-white shadow-md"
