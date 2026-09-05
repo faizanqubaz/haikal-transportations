@@ -13,7 +13,7 @@ const slides = [
     title: "The door closes. The road opens.",
   },
   {
-    video: "/videos/hero-coast.mp4",
+    video: "/videos/hero-volcano.mp4",
     eyebrow: "DISCOVER THE WORLD",
     title: "Your journey starts here.",
   },
