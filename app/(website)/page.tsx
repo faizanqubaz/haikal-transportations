@@ -1,14 +1,7 @@
+
 "use client";
 
 import { useRef, useState } from "react";
-
-import VideoHero from "@/components/hero/VideoHere";
-
-
-import type {
-  AvailabilitySearch,
-} from "@/components/hero/AvailabilityForm";
-
 import Link from "next/link";
 import {
   ArrowRight,
@@ -17,8 +10,15 @@ import {
   Headphones,
   Star,
 } from "lucide-react";
-import AvailabilityResults from "@/components/avaialibility/AvailabilityResults";
 
+import VideoHero from "@/components/hero/VideoHere";
+
+import type {
+  AvailabilitySearch,
+} from "@/components/hero/AvailabilityForm";
+
+import AvailabilityResults from "@/components/avaialibility/AvailabilityResults";
+import BookingAssistant from "@/components/ai/BookingAssistant";
 
 const destinations = [
   {
@@ -46,7 +46,7 @@ const destinations = [
 const tours = [
   {
     title: "Aliabad Hunza",
-    location: "Bali, Indonesia",
+    location: "Hunza, Pakistan",
     duration: "7 Days / 6 Nights",
     price: "$899",
     image: "/images/route-lagoon.jpg",
@@ -60,14 +60,12 @@ const tours = [
   },
   {
     title: "Gilgit Tours",
-    location: "Maldives",
+    location: "Gilgit-Baltistan, Pakistan",
     duration: "5 Days / 4 Nights",
     price: "$1,299",
     image: "/images/route-lagoon.jpg",
   },
 ];
-
-
 
 export default function HomePage() {
   const [search, setSearch] =
@@ -92,21 +90,35 @@ export default function HomePage() {
   };
 
   return (
-    <main>
+    <main className="min-h-screen bg-white">
 
-      <VideoHero
-        onSearch={handleSearch}
-      />
+      {/* =====================================================
+          HERO
+      ====================================================== */}
 
-      <AvailabilityResults
-        search={search}
-      />
+      <VideoHero onSearch={handleSearch} />
 
-      {/* OTHER HOME SECTIONS */}
 
-           <section className="px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+      {/* =====================================================
+          AVAILABILITY RESULTS
+      ====================================================== */}
 
-        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center">
+      <div
+        ref={resultsRef}
+        id="availability-results"
+        className="scroll-mt-20"
+      >
+        <AvailabilityResults search={search} />
+      </div>
+
+
+      {/* =====================================================
+          WELCOME
+      ====================================================== */}
+
+      <section className="px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28">
+
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center lg:gap-20">
 
           <div>
 
@@ -114,8 +126,9 @@ export default function HomePage() {
               WELCOME TO HAIKAL TOURS
             </p>
 
-            <h2 className="max-w-xl font-serif text-4xl leading-tight text-gray-900 sm:text-5xl">
+            <h2 className="max-w-2xl font-serif text-4xl leading-[1.1] text-gray-900 sm:text-5xl lg:text-6xl">
               Travel is not just about the destination.
+
               <span className="text-teal-700">
                 {" "}It's about the journey.
               </span>
@@ -134,10 +147,14 @@ export default function HomePage() {
 
             <Link
               href="/about"
-              className="mt-7 inline-flex items-center gap-2 font-semibold text-teal-700 transition hover:gap-3"
+              className="group mt-7 inline-flex items-center gap-2 font-semibold text-teal-700 transition-all"
             >
               Discover Haikal Tours
-              <ArrowRight size={18} />
+
+              <ArrowRight
+                size={18}
+                className="transition-transform group-hover:translate-x-1"
+              />
             </Link>
 
           </div>
@@ -151,11 +168,11 @@ export default function HomePage() {
           POPULAR DESTINATIONS
       ====================================================== */}
 
-      <section className="bg-gray-50 px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+      <section className="bg-gray-50 px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28">
 
         <div className="mx-auto max-w-7xl">
 
-          <div className="mb-12 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div className="mb-10 flex flex-col gap-5 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
 
             <div>
 
@@ -171,24 +188,27 @@ export default function HomePage() {
 
             <Link
               href="/destinations"
-              className="flex items-center gap-2 text-sm font-semibold text-teal-700"
+              className="group flex w-fit items-center gap-2 text-sm font-semibold text-teal-700"
             >
               View all destinations
-              <ArrowRight size={17} />
+
+              <ArrowRight
+                size={17}
+                className="transition-transform group-hover:translate-x-1"
+              />
             </Link>
 
           </div>
 
 
-          {/* Destination Grid */}
-
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
             {destinations.map((destination) => (
+
               <Link
-                href={`/booking/`}
+                href="/booking"
                 key={destination.name}
-                className="group relative h-[380px] overflow-hidden rounded-2xl"
+                className="group relative h-[330px] overflow-hidden rounded-2xl shadow-sm sm:h-[380px]"
               >
 
                 <img
@@ -197,22 +217,23 @@ export default function HomePage() {
                   className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                <div className="absolute bottom-0 left-0 p-6 text-white">
+                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
 
                   <div className="mb-2 flex items-center gap-1.5 text-xs text-white/80">
                     <MapPin size={13} />
                     {destination.country}
                   </div>
 
-                  <h3 className="font-serif text-2xl">
+                  <h3 className="font-serif text-2xl text-white sm:text-3xl">
                     {destination.name}
                   </h3>
 
                 </div>
 
               </Link>
+
             ))}
 
           </div>
@@ -226,11 +247,11 @@ export default function HomePage() {
           FEATURED TOURS
       ====================================================== */}
 
-      <section className="px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+      <section className="px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28">
 
         <div className="mx-auto max-w-7xl">
 
-          <div className="mb-12 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div className="mb-10 flex flex-col gap-5 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
 
             <div>
 
@@ -246,10 +267,14 @@ export default function HomePage() {
 
             <Link
               href="/tours"
-              className="flex items-center gap-2 text-sm font-semibold text-teal-700"
+              className="group flex w-fit items-center gap-2 text-sm font-semibold text-teal-700"
             >
               Explore all tours
-              <ArrowRight size={17} />
+
+              <ArrowRight
+                size={17}
+                className="transition-transform group-hover:translate-x-1"
+              />
             </Link>
 
           </div>
@@ -258,14 +283,15 @@ export default function HomePage() {
           <div className="grid gap-7 md:grid-cols-2 lg:grid-cols-3">
 
             {tours.map((tour) => (
+
               <article
                 key={tour.title}
-                className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
               >
 
                 {/* Image */}
 
-                <div className="relative h-64 overflow-hidden">
+                <div className="relative h-60 overflow-hidden sm:h-64">
 
                   <img
                     src={tour.image}
@@ -273,7 +299,7 @@ export default function HomePage() {
                     className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                   />
 
-                  <div className="absolute left-4 top-4 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-gray-800">
+                  <div className="absolute left-4 top-4 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-gray-800 shadow-sm">
                     Featured
                   </div>
 
@@ -282,7 +308,7 @@ export default function HomePage() {
 
                 {/* Content */}
 
-                <div className="p-6">
+                <div className="p-5 sm:p-6">
 
                   <div className="mb-3 flex items-center gap-1.5 text-sm text-gray-500">
 
@@ -320,10 +346,14 @@ export default function HomePage() {
 
                     <Link
                       href="/booking"
-                      className="flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800"
+                      className="group flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800"
                     >
                       Book
-                      <ArrowRight size={16} />
+
+                      <ArrowRight
+                        size={16}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
                     </Link>
 
                   </div>
@@ -331,6 +361,7 @@ export default function HomePage() {
                 </div>
 
               </article>
+
             ))}
 
           </div>
@@ -344,7 +375,7 @@ export default function HomePage() {
           WHY HAIKAL TOURS
       ====================================================== */}
 
-      <section className="bg-[#063d43] px-5 py-20 text-white sm:px-8 lg:px-12 lg:py-28">
+      <section className="bg-[#063d43] px-5 py-16 text-white sm:px-8 sm:py-20 lg:px-12 lg:py-28">
 
         <div className="mx-auto max-w-7xl">
 
@@ -354,18 +385,18 @@ export default function HomePage() {
               WHY HAIKAL TOURS
             </p>
 
-            <h2 className="font-serif text-4xl sm:text-5xl">
+            <h2 className="font-serif text-4xl leading-tight sm:text-5xl">
               We take care of the journey.
             </h2>
 
           </div>
 
 
-          <div className="mt-14 grid gap-8 md:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:mt-14 md:grid-cols-3">
 
             {/* Feature 1 */}
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-7">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:bg-white/10 sm:p-7">
 
               <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
                 <ShieldCheck size={24} />
@@ -385,7 +416,7 @@ export default function HomePage() {
 
             {/* Feature 2 */}
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-7">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:bg-white/10 sm:p-7">
 
               <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
                 <Headphones size={24} />
@@ -405,7 +436,7 @@ export default function HomePage() {
 
             {/* Feature 3 */}
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-7">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 transition hover:bg-white/10 sm:p-7">
 
               <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
                 <Star size={24} />
@@ -433,21 +464,24 @@ export default function HomePage() {
           BOOKING CTA
       ====================================================== */}
 
-      <section className="px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+      <section className="px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28">
 
         <div className="mx-auto max-w-7xl">
 
-          <div className="relative overflow-hidden rounded-3xl bg-gray-900 px-6 py-20 text-center sm:px-12 lg:px-20">
+          <div className="relative overflow-hidden rounded-3xl bg-gray-900 px-6 py-16 text-center sm:px-12 sm:py-20 lg:px-20">
 
             <div className="absolute inset-0 opacity-30">
+
               <img
                 src="/images/image.jpg"
                 alt=""
                 className="h-full w-full object-cover"
               />
+
             </div>
 
-            <div className="absolute inset-0 bg-black/50" />
+            <div className="absolute inset-0 bg-black/55" />
+
 
             <div className="relative z-10 mx-auto max-w-3xl">
 
@@ -455,7 +489,7 @@ export default function HomePage() {
                 START YOUR JOURNEY
               </p>
 
-              <h2 className="font-serif text-4xl text-white sm:text-6xl">
+              <h2 className="font-serif text-4xl leading-tight text-white sm:text-6xl">
                 Where will you go next?
               </h2>
 
@@ -466,9 +500,10 @@ export default function HomePage() {
 
               <Link
                 href="/booking"
-                className="mt-8 inline-flex items-center gap-3 rounded-full bg-white px-7 py-4 text-sm font-bold text-gray-900 transition hover:bg-teal-50"
+                className="mt-8 inline-flex items-center gap-3 rounded-full bg-white px-7 py-4 text-sm font-bold text-gray-900 shadow-lg transition hover:bg-teal-50"
               >
                 Start booking
+
                 <ArrowRight size={18} />
               </Link>
 
@@ -480,6 +515,27 @@ export default function HomePage() {
 
       </section>
 
+
+      {/* =====================================================
+          FLOATING BOOKING ASSISTANT
+      ====================================================== */}
+
+      <div
+        className="
+          fixed
+          bottom-4
+          right-4
+          z-[9999]
+          sm:bottom-6
+          sm:right-6
+          md:bottom-8
+          md:right-8
+        "
+      >
+        <BookingAssistant />
+      </div>
+
     </main>
   );
 }
+
