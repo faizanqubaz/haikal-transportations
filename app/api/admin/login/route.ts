@@ -17,7 +17,7 @@ const secret = new TextEncoder().encode(JWT_SECRET);
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-  console.log('body',body)
+    console.log('body', body)
     const username = body.username?.trim().toLowerCase();
     const password = body.password;
 
@@ -34,8 +34,8 @@ export async function POST(request: Request) {
     await connectDB();
 
     const admin = await Admin.findOne({ username }).lean();
-    console.log('admin',admin)
-    if (!admin) {
+    console.log('admin', admin)
+    if (!admin || admin.role !== "admin") {
       return NextResponse.json(
         {
           success: false,
@@ -59,7 +59,6 @@ export async function POST(request: Request) {
         { status: 401 }
       );
     }
-
     const token = await new SignJWT({
       userId: admin._id.toString(),
       username: admin.username,

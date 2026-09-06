@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/libs/mongodb";
 import Booking from "@/models/Booking";
 import Bus from "@/models/Bus";
+import Notification from "@/models/Notification";
 
 const EDITABLE_FIELDS = [
   "passengerName",
@@ -130,6 +131,8 @@ export async function DELETE(
   }
 }
 
+
+
 // ============================================================
 // PATCH /api/bookings/[id]
 // ============================================================
@@ -184,11 +187,36 @@ export async function PATCH(
     }
 
     // ========================================================
+    // PREVENT DOUBLE-PROCESSING
+    //
+    // Blocks flipping an already-decided booking straight from
+    // approved -> rejected (or vice versa) without going through
+    // "pending" first, and stops a duplicate approve/reject click
+    // from re-marking seats, re-sending the email, or trying to
+    // delete a notification that's already gone.
+    //
+    // Re-submitting the SAME status (idempotent retry) is allowed,
+    // and explicitly resetting to "pending" is always allowed.
+    // ========================================================
+
+    if (
+      body.status &&
+      body.status !== "pending" &&
+      booking.status !== "pending" &&
+      booking.status !== body.status
+    ) {
+      return NextResponse.json(
+        { error: `Booking is already ${booking.status}` },
+        { status: 409 }
+      );
+    }
+
+    // ========================================================
     // FIND BUS
     // ========================================================
 
     const bus = await Bus.findById(booking.bus);
-   console.log('bus',bus)
+    console.log('bus', bus)
     if (!bus) {
       return NextResponse.json(
         {
@@ -202,10 +230,11 @@ export async function PATCH(
     // STATUS CHANGE
     // ========================================================
 
-const newStatus = body.status;
-console.log('statuschange',newStatus)
+    const newStatus = body.status;
+    console.log('statuschange', newStatus)
+
     if (newStatus) {
-      
+
       const bookingSeats = booking.seats.map((seat: any) =>
         String(seat).trim()
       );
@@ -261,11 +290,11 @@ console.log('statuschange',newStatus)
 
         await bus.save();
 
-      console.log('booking2',booking)
+        console.log('booking2', booking)
         booking.emailSent = false;
-console.log('booking3',booking)
+        console.log('booking3', booking)
         booking.emailScheduledAt = new Date()
-console.log('booking4',booking)
+        console.log('booking4', booking)
         console.log(
           `EMAIL SCHEDULED FOR BOOKING ${booking.bookingRef}`,
           booking.emailScheduledAt
@@ -316,6 +345,22 @@ console.log('booking4',booking)
       }
 
       booking.status = newStatus;
+
+      // ======================================================
+      // NOTIFICATION CLEANUP
+      //
+      // Only approve/reject close out the notification — resetting
+      // back to "pending" leaves it alone since there's nothing new
+      // for the admin to review yet.
+      // ======================================================
+
+      if (newStatus === "approved" || newStatus === "rejected") {
+        await Notification.updateMany(
+          { bookingId: booking._id },
+          { read: true }
+        );
+        await Notification.deleteMany({ bookingId: booking._id });
+      }
     }
 
     // ========================================================
@@ -355,59 +400,78 @@ console.log('booking4',booking)
       );
     }
 
+    // ========================================================
     // SEND CONFIRMATION EMAIL AFTER APPROVAL
-// ========================================================
-console.log('newStatus',newStatus)
-console.log('updatedBooking.passengerEmail',updatedBooking.passengerEmail)
-if (
-  newStatus === "approved" &&
-  updatedBooking.passengerEmail
-) {
-  try {
-    await sendBookingConfirmationEmail({
-      passengerName: updatedBooking.passengerName,
-      passengerEmail: updatedBooking.passengerEmail,
-      passengerPhone: updatedBooking.passengerPhone,
-      bookingRef: updatedBooking.bookingRef,
-      route: updatedBooking.route,
-      travelDate: updatedBooking.travelDate,
-      travelTime: updatedBooking.travelTime,
-      seats: updatedBooking.seats || [],
-      busNumber:
-        typeof updatedBooking.bus === "object" &&
-        updatedBooking.bus !== null
-          ? (updatedBooking.bus as any).busNumber
-          : undefined,
+    // ========================================================
+
+    console.log('newStatus', newStatus)
+    console.log('updatedBooking.passengerEmail', updatedBooking.passengerEmail)
+
+    let emailSent = false;
+
+    if (
+      newStatus === "approved" &&
+      updatedBooking.passengerEmail
+    ) {
+      try {
+        await sendBookingConfirmationEmail({
+          passengerName: updatedBooking.passengerName,
+          passengerEmail: updatedBooking.passengerEmail,
+          passengerPhone: updatedBooking.passengerPhone,
+          bookingRef: updatedBooking.bookingRef,
+          route: updatedBooking.route,
+          travelDate: updatedBooking.travelDate,
+          travelTime: updatedBooking.travelTime,
+          seats: updatedBooking.seats || [],
+          busNumber:
+            typeof updatedBooking.bus === "object" &&
+            updatedBooking.bus !== null
+              ? (updatedBooking.bus as any).busNumber
+              : undefined,
+        });
+
+        // Email successfully sent
+        await Booking.findByIdAndUpdate(id, {
+          emailSent: true,
+        });
+
+        emailSent = true;
+
+        console.log(
+          `BOOKING CONFIRMATION EMAIL SENT: ${updatedBooking.bookingRef}`
+        );
+      } catch (emailError) {
+        console.error(
+          `BOOKING CONFIRMATION EMAIL FAILED: ${updatedBooking.bookingRef}`,
+          emailError
+        );
+
+        // Don't fail the booking approval just because email failed
+        await Booking.findByIdAndUpdate(id, {
+          emailSent: false,
+        });
+      }
+    }
+
+    // ========================================================
+    // BUILD RESPONSE MESSAGE
+    // ========================================================
+
+    const messageByStatus: Record<string, string> = {
+      approved: "Booking approved successfully",
+      rejected: "Booking rejected successfully",
+      pending: "Booking reset to pending",
+    };
+
+    return NextResponse.json({
+      success: true,
+      message: newStatus
+        ? messageByStatus[newStatus] || "Booking updated successfully"
+        : "Booking updated successfully",
+      booking: updatedBooking,
+      emailSent,
     });
 
-     // Email successfully sent
-    await Booking.findByIdAndUpdate(id, {
-      emailSent: true,
-    });
-
-    console.log(
-      `BOOKING CONFIRMATION EMAIL SENT: ${updatedBooking.bookingRef}`
-    );
-  } catch (emailError) {
-    console.error(
-      `BOOKING CONFIRMATION EMAIL FAILED: ${updatedBooking.bookingRef}`,
-      emailError
-    );
-
-    // Don't fail the booking approval just because email failed
-    await Booking.findByIdAndUpdate(id, {
-      emailSent: false,
-    });
-  }
-}
-
-return NextResponse.json({
-  success: true,
-  message: "Booking approved successfully",
-  booking: updatedBooking,
-});
-
-   
   } catch (err) {
     console.error(
       "PATCH /api/bookings/[id] failed:",
@@ -428,4 +492,3 @@ return NextResponse.json({
     );
   }
 }
-

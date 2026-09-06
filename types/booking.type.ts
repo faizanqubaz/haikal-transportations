@@ -19,6 +19,8 @@ type Stats = {
   todaysBookings: number;
   activeBuses: number;
   passengerCount: number;
+  todaysBookedSeats:number;
+  totalBuses:number;
 };
 
 type Trip = {

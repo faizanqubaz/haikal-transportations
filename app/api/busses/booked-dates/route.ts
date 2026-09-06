@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server";
 
 import { connectDB } from "@/libs/mongodb";
@@ -24,12 +23,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Case-insensitive exact matching
+    // Escape special regex characters
     const escapeRegex = (value: string) =>
       value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    const pickupRegex = new RegExp(`^${escapeRegex(pickup)}$`, "i");
-    const dropoffRegex = new RegExp(`^${escapeRegex(dropoff)}$`, "i");
+    // Case-insensitive exact matching
+    const pickupRegex = new RegExp(
+      `^${escapeRegex(pickup)}$`,
+      "i"
+    );
+
+    const dropoffRegex = new RegExp(
+      `^${escapeRegex(dropoff)}$`,
+      "i"
+    );
+
+    console.log("BOOKED DATES REQUEST:", {
+      pickup,
+      dropoff,
+    });
 
     const buses = await Bus.find({
       pickup: pickupRegex,
@@ -38,15 +50,13 @@ export async function GET(request: NextRequest) {
       .select("date seats")
       .lean();
 
-    console.log("BOOKED DATES REQUEST:", {
-      pickup,
-      dropoff,
-    });
-
     console.log("BUSES FOUND:", buses.length);
 
     // Group buses by date
-    const busesByDate = new Map<string, typeof buses>();
+    const busesByDate = new Map<
+      string,
+      typeof buses
+    >();
 
     for (const bus of buses) {
       if (!bus.date) continue;
@@ -71,7 +81,9 @@ export async function GET(request: NextRequest) {
        */
 
       const hasAvailableSeat = dateBuses.some((bus) =>
-        bus.seats?.some((seat) => seat.status === "available")
+        bus.seats?.some(
+          (seat) => seat.status === "available"
+        )
       );
 
       if (!hasAvailableSeat) {
@@ -100,4 +112,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

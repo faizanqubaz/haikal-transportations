@@ -186,7 +186,7 @@ export default function HomePage() {
 
             {destinations.map((destination) => (
               <Link
-                href={`/destinations/${destination.name.toLowerCase()}`}
+                href={`/booking/`}
                 key={destination.name}
                 className="group relative h-[380px] overflow-hidden rounded-2xl"
               >

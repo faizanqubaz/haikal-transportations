@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 import {
   LayoutDashboard,
@@ -47,31 +47,7 @@ const menuItems = [
     href: "/admin/trips",
     icon: Bus,
   },
-  {
-    name: "Passengers",
-    href: "/admin/passengers",
-    icon: Users,
-  },
-  {
-    name: "Destinations",
-    href: "/admin/destinations",
-    icon: MapPin,
-  },
-  {
-    name: "Hotels",
-    href: "/admin/hotels",
-    icon: Hotel,
-  },
-  {
-    name: "Packages",
-    href: "/admin/packages",
-    icon: Package,
-  },
-  {
-    name: "Routes",
-    href: "/admin/routes",
-    icon: Navigation,
-  },
+ 
   {
     name: "Drivers",
     href: "/admin/drivers",
@@ -123,6 +99,23 @@ export default function AdminDashboard() {
 
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  /*
+   * ============================
+   * UNREAD NOTIFICATIONS
+   * ============================
+   *
+   * The bell/list should only ever show notifications
+   * that haven't been read yet. Filtering here (instead
+   * of trusting whatever the API returns) means that even
+   * if the backend sends back read notifications too, the
+   * UI still only surfaces the unread ones.
+   */
+
+  const unreadNotifications = useMemo(
+    () => notifications.filter((n) => !n.read),
+    [notifications]
+  );
 
   /*
    * ============================
@@ -186,14 +179,26 @@ export default function AdminDashboard() {
 
       const data = await res.json();
 
-      console.log("NOTIFICATIONS:", data);
+      const fetched: AdminNotification[] =
+        data.notifications || [];
 
-      setNotifications(
-        data.notifications || []
+      setNotifications(fetched);
+
+      /*
+       * Prefer a locally computed unread count over
+       * whatever the API reports, so the badge always
+       * matches what's actually rendered in the list.
+       * Falls back to the API's count if, for some
+       * reason, notifications don't carry a `read` flag.
+       */
+      const hasReadFlag = fetched.some(
+        (n) => typeof n.read === "boolean"
       );
 
       setNotificationCount(
-        data.count || 0
+        hasReadFlag
+          ? fetched.filter((n) => !n.read).length
+          : data.count || 0
       );
     } catch (error) {
       console.error(
@@ -232,71 +237,40 @@ export default function AdminDashboard() {
    * ============================
    */
 
-  async function handleBookingAction(
-    id: string,
-    action: "approve" | "reject"
-  ) {
-    setActioningId(id);
+ async function handleBookingAction(id: string, action: "approve" | "reject") {
+  setActioningId(id);
 
-    try {
-      const res = await fetch(
-        `/api/bookings/${id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            status:
-              action === "approve"
-                ? "approved"
-                : "rejected",
-          }),
-        }
-      );
+  try {
+    const res = await fetch(`/api/bookings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: action === "approve" ? "approved" : "rejected",
+      }),
+    });
 
-      const data = await res.json();
-   console.log('datafrom',data)
-      console.log(
-        "BOOKING ACTION RESPONSE:",
-        data
-      );
- 
-      if (!res.ok) {
-        throw new Error(
-          data.error ||
-            "Request failed"
-        );
-      }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
 
-      /*
-       * Close pending booking modal
-       */
-      setSelectedNotification(null);
+    // Notification was already deleted server-side (see API route below)
+    setNotifications((prev) => prev.filter((n) => n.bookingId?._id !== id));
+    setNotificationCount((prev) => Math.max(0, prev - 1));
+    setSelectedNotification(null);
 
-      // SEND A CONFIRMATION EMAIL HERE 
-      /*
-       * Refresh dashboard and notifications
-       */
-      await Promise.all([
-        loadData(),
-        loadNotifications(),
-      ]);
+    alert(
+      action === "approve"
+        ? `Booking approved${data.emailSent ? " — confirmation email sent." : " (email failed to send, check logs)."}`
+        : `Booking rejected${data.emailSent ? " — the passenger has been notified by email." : " (email failed to send, check logs)."}`
+    );
 
-    } catch (err) {
-      console.error(
-        `Failed to ${action} booking:`,
-        err
-      );
-
-      alert(
-        `Something went wrong trying to ${action} this booking. Please try again.`
-      );
-    } finally {
-      setActioningId(null);
-    }
+    await Promise.all([loadData(), loadNotifications()]);
+  } catch (err) {
+    console.error(`Failed to ${action} booking:`, err);
+    alert(`Something went wrong trying to ${action} this booking. Please try again.`);
+  } finally {
+    setActioningId(null);
   }
+}
 
   /*
    * ============================
@@ -344,12 +318,12 @@ export default function AdminDashboard() {
    * STAT CARDS
    * ============================
    */
-
+console.log('stats',stats)
   const statCards = [
     {
       title: "Total Bookings",
       value:
-        stats?.totalBookings ?? "—",
+        stats?.todaysBookedSeats ?? "—",
       icon: CalendarCheck,
     },
 
@@ -362,15 +336,14 @@ export default function AdminDashboard() {
 
     {
       title: "Active Buses",
-      value:
-        stats?.activeBuses ?? "—",
+        value: stats?.totalBuses ?? "—",
       icon: Bus,
     },
 
     {
       title: "Passengers",
       value:
-        stats?.passengerCount ?? "—",
+        stats?.todaysBookedSeats ?? "—",
       icon: Users,
     },
   ];
@@ -444,26 +417,16 @@ export default function AdminDashboard() {
    * does not destroy the booking modal.
    */
 
-  function handleNotificationClick(
-    notification: AdminNotification
-  ) {
-    console.log(
-      "SELECTED NOTIFICATION:",
-      notification
-    );
 
-    /*
-     * First store the selected notification
-     */
-    setSelectedNotification(
-      notification
-    );
 
-    /*
-     * Then close notification list
-     */
-    setShowNotifications(false);
-  }
+function handleNotificationClick(notification: AdminNotification) {
+  setSelectedNotification(notification);
+  setShowNotifications(false);
+  // No API call here anymore — notification stays "unread" in the DB
+  // until the admin actually approves/rejects.
+}
+
+
 
   /*
    * ============================
@@ -1600,7 +1563,8 @@ export default function AdminDashboard() {
           NOTIFICATION MODAL
           
           IMPORTANT:
-          This modal ONLY contains the notification list.
+          This modal ONLY contains the notification list,
+          and only ever shows UNREAD notifications.
           
           The booking request modal is BELOW this block,
           OUTSIDE this modal.
@@ -1632,9 +1596,9 @@ export default function AdminDashboard() {
                 </h3>
 
                 <p className="mt-1 text-xs text-gray-400">
-                  {notificationCount} pending
+                  {unreadNotifications.length} pending
                   request
-                  {notificationCount !==
+                  {unreadNotifications.length !==
                   1
                     ? "s"
                     : ""}
@@ -1660,7 +1624,7 @@ export default function AdminDashboard() {
 
             <div className="max-h-[500px] overflow-y-auto">
 
-              {notifications.length ===
+              {unreadNotifications.length ===
               0 ? (
                 <div className="px-5 py-12 text-center">
 
@@ -1683,7 +1647,7 @@ export default function AdminDashboard() {
 
                 </div>
               ) : (
-                notifications.map(
+                unreadNotifications.map(
                   (notification) => (
                     <button
                       key={
@@ -1707,9 +1671,7 @@ export default function AdminDashboard() {
                           className="text-red-500"
                         />
 
-                        {!notification.read && (
-                          <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
-                        )}
+                        <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
 
                       </div>
 
@@ -1725,11 +1687,9 @@ export default function AdminDashboard() {
                             }
                           </p>
 
-                          {!notification.read && (
-                            <span className="shrink-0 rounded-full bg-red-100 px-2 py-1 text-[9px] font-black uppercase text-red-600">
-                              New
-                            </span>
-                          )}
+                          <span className="shrink-0 rounded-full bg-red-100 px-2 py-1 text-[9px] font-black uppercase text-red-600">
+                            New
+                          </span>
 
                         </div>
 

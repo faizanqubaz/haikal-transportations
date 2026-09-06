@@ -77,3 +77,52 @@ export async function GET(
   }
 }
 
+
+
+
+type Params = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: Params
+) {
+  try {
+    await connectDB();
+
+    const { id } = await params;
+
+    console.log("DELETE BUS ID:", id);
+
+    const deletedBus = await Bus.findByIdAndDelete(id);
+
+    if (!deletedBus) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Bus not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Bus deleted successfully",
+      bus: deletedBus,
+    });
+  } catch (error) {
+    console.error("DELETE BUS ERROR:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to delete bus",
+      },
+      { status: 500 }
+    );
+  }
+}

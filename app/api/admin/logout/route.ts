@@ -7,10 +7,14 @@ export async function POST() {
       message: "Logged out successfully",
     });
 
-    response.cookies.set("adminToken", "", {
+    response.cookies.set({
+      name: "admin_token",
+      value: "",
       httpOnly: true,
       expires: new Date(0),
       path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
     });
 
     return response;
@@ -18,7 +22,10 @@ export async function POST() {
     console.error("LOGOUT ERROR:", error);
 
     return NextResponse.json(
-      { success: false, message: "Logout failed" },
+      {
+        success: false,
+        message: "Logout failed",
+      },
       { status: 500 }
     );
   }

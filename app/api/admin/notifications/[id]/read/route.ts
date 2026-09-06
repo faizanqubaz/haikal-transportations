@@ -1,4 +1,6 @@
+
 import { NextRequest, NextResponse } from "next/server";
+
 import { connectDB } from "@/libs/mongodb";
 import Notification from "@/models/Notification";
 
@@ -8,26 +10,18 @@ type Params = {
   }>;
 };
 
-export async function PATCH(
+
+export async function POST(
   req: NextRequest,
   { params }: Params
 ) {
   try {
-    await connectDB();
-
     const { id } = await params;
 
-    const notification =
-      await Notification.findByIdAndUpdate(
-        id,
-        {
-          read: true,
-        },
-        {
-          new: true,
-        }
-      );
+    await connectDB();
 
+    const notification = await Notification.findById(id);
+console.log('notification',notification)
     if (!notification) {
       return NextResponse.json(
         {
@@ -38,23 +32,38 @@ export async function PATCH(
       );
     }
 
+    /*
+     * Step 1:
+     * Mark notification as read.
+     */
+    notification.read = true;
+
+    await notification.save();
+
+    /*
+     * Step 2:
+     * Delete it after it has been marked as read.
+     */
+   
+    await Notification.findByIdAndDelete(id);
+
     return NextResponse.json({
       success: true,
-      message: "Notification marked as read",
-      notification,
+      message: "Notification marked as read and deleted",
     });
   } catch (error) {
     console.error(
-      "MARK NOTIFICATION READ ERROR:",
+      "Failed to mark notification as read:",
       error
     );
 
     return NextResponse.json(
       {
         success: false,
-        error: "Unable to update notification",
+        error: "Failed to process notification",
       },
       { status: 500 }
     );
   }
 }
+
