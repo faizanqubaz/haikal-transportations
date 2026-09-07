@@ -118,7 +118,7 @@ export default function AvailabilityForm({ onSearch }: Props) {
           pickup: pickup.trim(),
           dropoff: dropoff.trim(),
         });
-console.log('params',params.toString())
+
         const response = await fetch(
           `/api/busses/booked-dates?${params.toString()}`,
           {

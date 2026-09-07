@@ -1,3 +1,4 @@
+
 import { sendBookingConfirmationEmail } from "@/libs/resend";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
@@ -6,6 +7,13 @@ import { connectDB } from "@/libs/mongodb";
 import Booking from "@/models/Booking";
 import Bus from "@/models/Bus";
 import Notification from "@/models/Notification";
+
+import {
+  createCacheKey,
+  getCache,
+  setCache,
+  deleteCache,
+} from "@/libs/cache/api-cache";
 
 const EDITABLE_FIELDS = [
   "passengerName",
@@ -18,6 +26,29 @@ const EDITABLE_FIELDS = [
   "status",
 ] as const;
 
+
+// ============================================================
+// CACHE CONFIGURATION
+// ============================================================
+
+// Booking information can change frequently,
+// so we use a short cache.
+const BOOKING_CACHE_TTL = 60;
+
+
+// ============================================================
+// CACHE HELPERS
+// ============================================================
+
+function getBookingCacheKey(id: string) {
+  return createCacheKey(
+    `/api/bookings/${id}`,
+    "GET",
+    { id }
+  );
+}
+
+
 // ============================================================
 // GET /api/bookings/[id]
 // ============================================================
@@ -27,39 +58,122 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
-
     const { id } = await params;
+
+    // ----------------------------------------------------------
+    // Validate ID BEFORE hitting Redis / database
+    // ----------------------------------------------------------
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: "Invalid booking id" },
-        { status: 400 }
+        {
+          error: "Invalid booking id",
+        },
+        {
+          status: 400,
+        }
       );
     }
+
+
+    // ----------------------------------------------------------
+    // CHECK REDIS CACHE FIRST
+    // ----------------------------------------------------------
+
+    const cacheKey = getBookingCacheKey(id);
+
+    const cached = await getCache<{
+      booking: any;
+    }>(cacheKey);
+
+
+    if (cached) {
+      console.log(
+        `BOOKING CACHE HIT: ${id}`
+      );
+
+      return NextResponse.json({
+        ...cached,
+        cached: true,
+      });
+    }
+
+
+    console.log(
+      `BOOKING CACHE MISS: ${id}`
+    );
+
+
+    // ----------------------------------------------------------
+    // DATABASE
+    // ----------------------------------------------------------
+
+    await connectDB();
+
 
     const booking = await Booking.findById(id)
       .populate("bus", "busNumber")
       .populate("driver", "name")
       .lean();
 
+
     if (!booking) {
       return NextResponse.json(
-        { error: "Booking not found" },
-        { status: 404 }
+        {
+          error: "Booking not found",
+        },
+        {
+          status: 404,
+        }
       );
     }
 
-    return NextResponse.json({ booking });
+
+    // ----------------------------------------------------------
+    // SAVE RESULT TO REDIS
+    // ----------------------------------------------------------
+
+    const responseData = {
+      booking,
+    };
+
+
+    await setCache(
+      cacheKey,
+      responseData,
+      BOOKING_CACHE_TTL
+    );
+
+
+    // ----------------------------------------------------------
+    // RESPONSE
+    // ----------------------------------------------------------
+
+    return NextResponse.json({
+      ...responseData,
+      cached: false,
+    });
+
+
   } catch (err) {
-    console.error("GET /api/bookings/[id] failed:", err);
+
+    console.error(
+      "GET /api/bookings/[id] failed:",
+      err
+    );
+
 
     return NextResponse.json(
-      { error: "Failed to fetch booking" },
-      { status: 500 }
+      {
+        error: "Failed to fetch booking",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
+
 
 // ============================================================
 // DELETE /api/bookings/[id]
@@ -70,67 +184,175 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+
     await connectDB();
 
     const { id } = await params;
 
+
+    // ----------------------------------------------------------
+    // VALIDATE ID
+    // ----------------------------------------------------------
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: "Invalid booking id" },
-        { status: 400 }
+        {
+          error: "Invalid booking id",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
-    const booking = await Booking.findById(id);
+
+    // ----------------------------------------------------------
+    // FIND BOOKING
+    // ----------------------------------------------------------
+
+    const booking =
+      await Booking.findById(id);
+
 
     if (!booking) {
       return NextResponse.json(
-        { error: "Booking not found" },
-        { status: 404 }
+        {
+          error: "Booking not found",
+        },
+        {
+          status: 404,
+        }
       );
     }
 
-    const bus = await Bus.findById(booking.bus);
+
+    // ----------------------------------------------------------
+    // FIND BUS
+    // ----------------------------------------------------------
+
+    const bus =
+      await Bus.findById(booking.bus);
+
 
     if (!bus) {
       return NextResponse.json(
-        { error: "Associated bus not found" },
-        { status: 404 }
+        {
+          error: "Associated bus not found",
+        },
+        {
+          status: 404,
+        }
       );
     }
 
-    const bookingSeats = booking.seats.map((seat: any) =>
-      String(seat).trim()
-    );
+
+    // ----------------------------------------------------------
+    // RELEASE BOOKING SEATS
+    // ----------------------------------------------------------
+
+    const bookingSeats =
+      booking.seats.map((seat: any) =>
+        String(seat).trim()
+      );
+
 
     bus.seats.forEach((seat: any) => {
-      const seatNumber = String(seat.seatNumber).trim();
 
-      if (bookingSeats.includes(seatNumber)) {
+      const seatNumber =
+        String(seat.seatNumber).trim();
+
+
+      if (
+        bookingSeats.includes(seatNumber)
+      ) {
         seat.status = "available";
       }
     });
 
+
     await bus.save();
+
+
+    // ----------------------------------------------------------
+    // DELETE BOOKING
+    // ----------------------------------------------------------
+
     await Booking.findByIdAndDelete(id);
+
+
+    // ----------------------------------------------------------
+    // DELETE RELATED NOTIFICATIONS
+    // ----------------------------------------------------------
+
+    await Notification.deleteMany({
+      bookingId: booking._id,
+    });
+
+
+    // ----------------------------------------------------------
+    // INVALIDATE BOOKING CACHE
+    // ----------------------------------------------------------
+
+    const bookingCacheKey =
+      getBookingCacheKey(id);
+
+
+    await deleteCache(
+      bookingCacheKey
+    );
+
+
+    // ----------------------------------------------------------
+    // INVALIDATE BUS CACHE
+    //
+    // The bus availability changed because seats were released.
+    // ----------------------------------------------------------
+
+    await deleteCache(
+      createCacheKey(
+        `/api/busses/${booking.bus}`,
+        "GET",
+        {
+          id: String(booking.bus),
+        }
+      )
+    );
+
+
+    // ----------------------------------------------------------
+    // RESPONSE
+    // ----------------------------------------------------------
 
     return NextResponse.json({
       success: true,
-      message: "Booking deleted and seats released successfully",
+
+      message:
+        "Booking deleted and seats released successfully",
+
       releasedSeats: bookingSeats,
+
+      cached: false,
     });
+
+
   } catch (err) {
-    console.error("DELETE /api/bookings/[id] failed:", err);
+
+    console.error(
+      "DELETE /api/bookings/[id] failed:",
+      err
+    );
+
 
     return NextResponse.json(
       {
         error: "Failed to delete booking",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
-
 
 
 // ============================================================
@@ -142,62 +364,77 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+
     await connectDB();
 
     const { id } = await params;
 
+
+    // ----------------------------------------------------------
+    // VALIDATE ID
+    // ----------------------------------------------------------
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { error: "Invalid booking id" },
-        { status: 400 }
+        {
+          error: "Invalid booking id",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
+
     const body = await req.json();
 
-    // ========================================================
+
+    // ----------------------------------------------------------
     // VALIDATE STATUS
-    // ========================================================
+    // ----------------------------------------------------------
 
     if (
       body.status &&
-      !["pending", "approved", "rejected"].includes(body.status)
+      ![
+        "pending",
+        "approved",
+        "rejected",
+      ].includes(body.status)
     ) {
       return NextResponse.json(
         {
           error: "Invalid status value",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
-    // ========================================================
-    // FIND BOOKING
-    // ========================================================
 
-    const booking = await Booking.findById(id);
+    // ----------------------------------------------------------
+    // FIND BOOKING
+    // ----------------------------------------------------------
+
+    const booking =
+      await Booking.findById(id);
+
 
     if (!booking) {
       return NextResponse.json(
         {
           error: "Booking not found",
         },
-        { status: 404 }
+        {
+          status: 404,
+        }
       );
     }
 
-    // ========================================================
-    // PREVENT DOUBLE-PROCESSING
-    //
-    // Blocks flipping an already-decided booking straight from
-    // approved -> rejected (or vice versa) without going through
-    // "pending" first, and stops a duplicate approve/reject click
-    // from re-marking seats, re-sending the email, or trying to
-    // delete a notification that's already gone.
-    //
-    // Re-submitting the SAME status (idempotent retry) is allowed,
-    // and explicitly resetting to "pending" is always allowed.
-    // ========================================================
+
+    // ----------------------------------------------------------
+    // PREVENT DOUBLE PROCESSING
+    // ----------------------------------------------------------
 
     if (
       body.status &&
@@ -206,289 +443,497 @@ export async function PATCH(
       booking.status !== body.status
     ) {
       return NextResponse.json(
-        { error: `Booking is already ${booking.status}` },
-        { status: 409 }
+        {
+          error:
+            `Booking is already ${booking.status}`,
+        },
+        {
+          status: 409,
+        }
       );
     }
 
-    // ========================================================
-    // FIND BUS
-    // ========================================================
 
-    const bus = await Bus.findById(booking.bus);
-    console.log('bus', bus)
+    // ----------------------------------------------------------
+    // FIND BUS
+    // ----------------------------------------------------------
+
+    const bus =
+      await Bus.findById(booking.bus);
+
+
     if (!bus) {
       return NextResponse.json(
         {
           error: "Associated bus not found",
         },
-        { status: 404 }
+        {
+          status: 404,
+        }
       );
     }
 
-    // ========================================================
-    // STATUS CHANGE
-    // ========================================================
 
-    const newStatus = body.status;
-    console.log('statuschange', newStatus)
+    // ----------------------------------------------------------
+    // STATUS CHANGE
+    // ----------------------------------------------------------
+
+    const newStatus =
+      body.status;
+
 
     if (newStatus) {
 
-      const bookingSeats = booking.seats.map((seat: any) =>
-        String(seat).trim()
-      );
+      const bookingSeats =
+        booking.seats.map(
+          (seat: any) =>
+            String(seat).trim()
+        );
 
-      // ======================================================
+
+      // ========================================================
       // APPROVED
-      // ======================================================
+      // ========================================================
 
       if (newStatus === "approved") {
-        // Make sure all requested seats exist
-        for (const seatNumber of bookingSeats) {
-          const seat = bus.seats.find(
-            (s: any) =>
-              String(s.seatNumber).trim() === seatNumber
-          );
+
+        // ------------------------------------------------------
+        // Check all requested seats
+        // ------------------------------------------------------
+
+        for (
+          const seatNumber
+          of bookingSeats
+        ) {
+
+          const seat =
+            bus.seats.find(
+              (s: any) =>
+                String(
+                  s.seatNumber
+                ).trim() ===
+                seatNumber
+            );
+
 
           if (!seat) {
             return NextResponse.json(
               {
-                error: `Seat ${seatNumber} not found on bus`,
+                error:
+                  `Seat ${seatNumber} not found on bus`,
               },
-              { status: 409 }
+              {
+                status: 409,
+              }
             );
           }
 
-          // Seat must currently belong to this pending booking
+
           if (
             seat.status !== "pending" &&
             seat.status !== "booked"
           ) {
             return NextResponse.json(
               {
-                error: `Seat ${seatNumber} is not available`,
+                error:
+                  `Seat ${seatNumber} is not available`,
               },
-              { status: 409 }
+              {
+                status: 409,
+              }
             );
           }
         }
 
-        // ====================================================
+
+        // ------------------------------------------------------
         // Mark seats as booked
-        // ====================================================
+        // ------------------------------------------------------
 
-        bus.seats.forEach((seat: any) => {
-          const seatNumber = String(
-            seat.seatNumber
-          ).trim();
+        bus.seats.forEach(
+          (seat: any) => {
 
-          if (bookingSeats.includes(seatNumber)) {
-            seat.status = "booked";
+            const seatNumber =
+              String(
+                seat.seatNumber
+              ).trim();
+
+
+            if (
+              bookingSeats.includes(
+                seatNumber
+              )
+            ) {
+              seat.status = "booked";
+            }
           }
-        });
+        );
+
 
         await bus.save();
 
-        console.log('booking2', booking)
+
+        // ------------------------------------------------------
+        // Schedule email
+        // ------------------------------------------------------
+
         booking.emailSent = false;
-        console.log('booking3', booking)
-        booking.emailScheduledAt = new Date()
-        console.log('booking4', booking)
+
+        booking.emailScheduledAt =
+          new Date();
+
+
         console.log(
           `EMAIL SCHEDULED FOR BOOKING ${booking.bookingRef}`,
           booking.emailScheduledAt
         );
       }
 
-      // ======================================================
+
+      // ========================================================
       // REJECTED
-      // ======================================================
+      // ========================================================
 
       if (newStatus === "rejected") {
-        bus.seats.forEach((seat: any) => {
-          const seatNumber = String(
-            seat.seatNumber
-          ).trim();
 
-          if (bookingSeats.includes(seatNumber)) {
-            seat.status = "available";
+        bus.seats.forEach(
+          (seat: any) => {
+
+            const seatNumber =
+              String(
+                seat.seatNumber
+              ).trim();
+
+
+            if (
+              bookingSeats.includes(
+                seatNumber
+              )
+            ) {
+              seat.status =
+                "available";
+            }
           }
-        });
+        );
+
 
         await bus.save();
 
-        // No confirmation email should be sent
-        booking.emailScheduledAt = undefined;
+
+        booking.emailScheduledAt =
+          undefined;
       }
 
-      // ======================================================
+
+      // ========================================================
       // PENDING
-      // ======================================================
+      // ========================================================
 
       if (newStatus === "pending") {
-        bus.seats.forEach((seat: any) => {
-          const seatNumber = String(
-            seat.seatNumber
-          ).trim();
 
-          if (bookingSeats.includes(seatNumber)) {
-            seat.status = "pending";
+        bus.seats.forEach(
+          (seat: any) => {
+
+            const seatNumber =
+              String(
+                seat.seatNumber
+              ).trim();
+
+
+            if (
+              bookingSeats.includes(
+                seatNumber
+              )
+            ) {
+              seat.status =
+                "pending";
+            }
           }
-        });
+        );
+
 
         await bus.save();
 
-        // Cancel any previously scheduled email
-        booking.emailScheduledAt = undefined;
+
+        booking.emailScheduledAt =
+          undefined;
+
         booking.emailSent = false;
       }
 
-      booking.status = newStatus;
 
-      // ======================================================
+      booking.status =
+        newStatus;
+
+
+      // --------------------------------------------------------
       // NOTIFICATION CLEANUP
-      //
-      // Only approve/reject close out the notification — resetting
-      // back to "pending" leaves it alone since there's nothing new
-      // for the admin to review yet.
-      // ======================================================
+      // --------------------------------------------------------
 
-      if (newStatus === "approved" || newStatus === "rejected") {
+      if (
+        newStatus === "approved" ||
+        newStatus === "rejected"
+      ) {
+
         await Notification.updateMany(
-          { bookingId: booking._id },
-          { read: true }
+          {
+            bookingId:
+              booking._id,
+          },
+          {
+            read: true,
+          }
         );
-        await Notification.deleteMany({ bookingId: booking._id });
+
+
+        await Notification.deleteMany({
+          bookingId:
+            booking._id,
+        });
       }
     }
 
-    // ========================================================
-    // OTHER EDITABLE FIELDS
-    // ========================================================
 
-    for (const field of EDITABLE_FIELDS) {
+    // ==========================================================
+    // OTHER EDITABLE FIELDS
+    // ==========================================================
+
+    for (
+      const field
+      of EDITABLE_FIELDS
+    ) {
+
       if (
         field !== "status" &&
         body[field] !== undefined
       ) {
-        (booking as any)[field] = body[field];
+
+        (booking as any)[field] =
+          body[field];
       }
     }
 
-    // ========================================================
+
+    // ==========================================================
     // SAVE BOOKING
-    // ========================================================
+    // ==========================================================
 
     await booking.save();
 
-    // ========================================================
-    // RETURN UPDATED BOOKING
-    // ========================================================
 
-    const updatedBooking = await Booking.findById(id)
-      .populate("bus", "busNumber")
-      .populate("driver", "name")
-      .lean();
+    // ==========================================================
+    // GET UPDATED BOOKING
+    // ==========================================================
+
+    const updatedBooking =
+      await Booking.findById(id)
+        .populate(
+          "bus",
+          "busNumber"
+        )
+        .populate(
+          "driver",
+          "name"
+        )
+        .lean();
+
 
     if (!updatedBooking) {
       return NextResponse.json(
         {
-          error: "Booking was updated but could not be retrieved",
+          error:
+            "Booking was updated but could not be retrieved",
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 
-    // ========================================================
-    // SEND CONFIRMATION EMAIL AFTER APPROVAL
-    // ========================================================
 
-    console.log('newStatus', newStatus)
-    console.log('updatedBooking.passengerEmail', updatedBooking.passengerEmail)
+    // ==========================================================
+    // INVALIDATE BOOKING CACHE
+    //
+    // IMPORTANT:
+    // PATCH changed the database, therefore the old GET cache
+    // must be removed.
+    // ==========================================================
+
+    await deleteCache(
+      getBookingCacheKey(id)
+    );
+
+
+    // ==========================================================
+    // INVALIDATE BUS CACHE
+    //
+    // Status changes can change seat availability.
+    // ==========================================================
+
+    await deleteCache(
+      createCacheKey(
+        `/api/busses/${booking.bus}`,
+        "GET",
+        {
+          id: String(booking.bus),
+        }
+      )
+    );
+
+
+    // ==========================================================
+    // SEND CONFIRMATION EMAIL
+    // ==========================================================
 
     let emailSent = false;
+
 
     if (
       newStatus === "approved" &&
       updatedBooking.passengerEmail
     ) {
+
       try {
+
         await sendBookingConfirmationEmail({
-          passengerName: updatedBooking.passengerName,
-          passengerEmail: updatedBooking.passengerEmail,
-          passengerPhone: updatedBooking.passengerPhone,
-          bookingRef: updatedBooking.bookingRef,
-          route: updatedBooking.route,
-          travelDate: updatedBooking.travelDate,
-          travelTime: updatedBooking.travelTime,
-          seats: updatedBooking.seats || [],
+          passengerName:
+            updatedBooking.passengerName,
+
+          passengerEmail:
+            updatedBooking.passengerEmail,
+
+          passengerPhone:
+            updatedBooking.passengerPhone,
+
+          bookingRef:
+            updatedBooking.bookingRef,
+
+          route:
+            updatedBooking.route,
+
+          travelDate:
+            updatedBooking.travelDate,
+
+          travelTime:
+            updatedBooking.travelTime,
+
+          seats:
+            updatedBooking.seats || [],
+
           busNumber:
-            typeof updatedBooking.bus === "object" &&
+            typeof updatedBooking.bus ===
+              "object" &&
             updatedBooking.bus !== null
-              ? (updatedBooking.bus as any).busNumber
+              ? (updatedBooking.bus as any)
+                  .busNumber
               : undefined,
         });
 
-        // Email successfully sent
-        await Booking.findByIdAndUpdate(id, {
-          emailSent: true,
-        });
+
+        await Booking.findByIdAndUpdate(
+          id,
+          {
+            emailSent: true,
+          }
+        );
+
 
         emailSent = true;
+
 
         console.log(
           `BOOKING CONFIRMATION EMAIL SENT: ${updatedBooking.bookingRef}`
         );
+
+
       } catch (emailError) {
+
         console.error(
           `BOOKING CONFIRMATION EMAIL FAILED: ${updatedBooking.bookingRef}`,
           emailError
         );
 
-        // Don't fail the booking approval just because email failed
-        await Booking.findByIdAndUpdate(id, {
-          emailSent: false,
-        });
+
+        await Booking.findByIdAndUpdate(
+          id,
+          {
+            emailSent: false,
+          }
+        );
       }
     }
 
-    // ========================================================
-    // BUILD RESPONSE MESSAGE
-    // ========================================================
 
-    const messageByStatus: Record<string, string> = {
-      approved: "Booking approved successfully",
-      rejected: "Booking rejected successfully",
-      pending: "Booking reset to pending",
+    // ==========================================================
+    // BUILD RESPONSE MESSAGE
+    // ==========================================================
+
+    const messageByStatus: Record<
+      string,
+      string
+    > = {
+
+      approved:
+        "Booking approved successfully",
+
+      rejected:
+        "Booking rejected successfully",
+
+      pending:
+        "Booking reset to pending",
     };
 
+
+    // ==========================================================
+    // RESPONSE
+    // ==========================================================
+
     return NextResponse.json({
+
       success: true,
-      message: newStatus
-        ? messageByStatus[newStatus] || "Booking updated successfully"
-        : "Booking updated successfully",
-      booking: updatedBooking,
+
+      message:
+        newStatus
+          ? messageByStatus[
+              newStatus
+            ] ||
+            "Booking updated successfully"
+          : "Booking updated successfully",
+
+      booking:
+        updatedBooking,
+
       emailSent,
+
+      cached: false,
     });
 
+
   } catch (err) {
+
     console.error(
       "PATCH /api/bookings/[id] failed:",
       err
     );
 
+
     return NextResponse.json(
       {
-        error: "Failed to update booking",
+        error:
+          "Failed to update booking",
+
         details:
-          process.env.NODE_ENV === "development"
+          process.env.NODE_ENV ===
+          "development"
             ? err instanceof Error
               ? err.message
               : String(err)
             : undefined,
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
+

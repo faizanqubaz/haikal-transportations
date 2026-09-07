@@ -142,6 +142,7 @@ export default function AdminDashboard() {
       const statsData = await statsRes.json();
       const bookingsData = await bookingsRes.json();
       const tripsData = await tripsRes.json();
+      console.log('tripdata',tripsData)
 
       setStats(statsData);
       setBookings(bookingsData.bookings || []);
@@ -323,7 +324,7 @@ console.log('stats',stats)
     {
       title: "Total Bookings",
       value:
-        stats?.todaysBookedSeats ?? "—",
+        stats?.totalBookings ?? "—",
       icon: CalendarCheck,
     },
 
@@ -343,7 +344,7 @@ console.log('stats',stats)
     {
       title: "Passengers",
       value:
-        stats?.todaysBookedSeats ?? "—",
+        stats?.totalBookings ?? "—",
       icon: Users,
     },
   ];
@@ -1404,83 +1405,79 @@ function handleNotificationClick(notification: AdminNotification) {
                     </p>
                   )}
 
-                {upcomingTrips.map(
-                  (trip) => (
-                    <div
-                      key={`${trip.busNumber}-${trip.departure}`}
-                      className="p-5"
-                    >
+            {upcomingTrips.map((trip) => (
+  <button
+    type="button"
+    key={`${trip.busId}-${trip.departure}`}
+    onClick={() =>
+      router.push(
+        `/admin/trips/today/${trip.busId}`
+      )
+    }
+    className="block w-full p-5 text-left transition hover:bg-teal-50/40"
+  >
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50">
+          <Bus
+            size={18}
+            className="text-teal-700"
+          />
+        </div>
 
-                      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-gray-900">
+            {trip.busNumber}
+          </p>
 
-                        <div className="flex items-center gap-3">
+          <p className="text-xs text-gray-400">
+            {trip.departure}
+          </p>
+        </div>
+      </div>
 
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50">
-                            <Bus
-                              size={18}
-                              className="text-teal-700"
-                            />
-                          </div>
+      <span className="text-xs font-bold text-gray-500">
+        {trip.bookedSeats}/{trip.capacity}
+      </span>
+    </div>
 
-                          <div>
+    <div className="mt-4">
+      <p className="text-sm font-semibold text-gray-700">
+        {trip.route}
+      </p>
 
-                            <p className="text-sm font-bold text-gray-900">
-                              {
-                                trip.busNumber
-                              }
-                            </p>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+        <div
+          className="h-full rounded-full bg-teal-700"
+          style={{
+            width: `${Math.min(
+              (trip.bookedSeats /
+                trip.capacity) *
+                100,
+              100
+            )}%`,
+          }}
+        />
+      </div>
+    </div>
 
-                            <p className="text-xs text-gray-400">
-                              {
-                                trip.departure
-                              }
-                            </p>
+    <div className="mt-3 flex items-center justify-between">
+      <span className="text-[11px] text-gray-400">
+        {trip.hasBookings
+          ? `${trip.totalBookings} booking${
+              trip.totalBookings !== 1
+                ? "s"
+                : ""
+            }`
+          : "No bookings"}
+      </span>
 
-                          </div>
-
-                        </div>
-
-                        <span className="text-xs font-bold text-gray-500">
-                          {
-                            trip.bookedSeats
-                          }
-                          /
-                          {
-                            trip.capacity
-                          }
-                        </span>
-
-                      </div>
-
-                      <div className="mt-4">
-
-                        <p className="text-sm font-semibold text-gray-700">
-                          {
-                            trip.route
-                          }
-                        </p>
-
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
-
-                          <div
-                            className="h-full rounded-full bg-teal-700"
-                            style={{
-                              width: `${Math.min(
-                                (trip.bookedSeats /
-                                  trip.capacity) *
-                                  100,
-                                100
-                              )}%`,
-                            }}
-                          />
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )
-                )}
+      <span className="text-[11px] font-bold text-teal-700">
+        View passengers →
+      </span>
+    </div>
+  </button>
+))}
 
               </div>
 

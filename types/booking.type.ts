@@ -24,11 +24,31 @@ type Stats = {
 };
 
 type Trip = {
+  busId: string;
+
   busNumber: string;
+  company: string;
+
   route: string;
+  pickup: string;
+  dropoff: string;
+
+  date: string;
   departure: string;
-  bookedSeats: number;
+  arrival: string;
+  duration: string;
+
+  price: number;
+
   capacity: number;
+  availableSeats: number;
+  bookedSeats: number;
+
+  totalBookings: number;
+  pendingSeats: number;
+  confirmedSeats: number;
+
+  hasBookings: boolean;
 };
 
 type NotificationBooking = {
