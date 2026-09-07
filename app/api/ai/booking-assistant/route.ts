@@ -4,113 +4,81 @@ import {
   HumanMessage,
   AIMessage,
 } from "@langchain/core/messages";
+import { getBookingAssistant } from "@/libs/ai/graph";
 
-import { bookingAssistant } from "@/libs/ai/graph";
+// ✅ import the graph, not the React component
 
-export async function POST(
-  request: NextRequest
-) {
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
     const message =
-      typeof body.message === "string"
-        ? body.message.trim()
-        : "";
+      typeof body.message === "string" ? body.message.trim() : "";
 
-    const language =
-      body.language === "ur"
-        ? "ur"
-        : "en";
+    const threadId =
+      typeof body.threadId === "string" ? body.threadId : "";
 
     if (!message) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Message is required.",
-        },
+        { success: false, message: "پیغام ضروری ہے۔" },
         { status: 400 }
       );
     }
 
-    console.log(
-      "BOOKING ASSISTANT:",
+    if (!threadId) {
+      return NextResponse.json(
+        { success: false, message: "Conversation ID ضروری ہے۔" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ get the compiled graph, then invoke it
+    const bookingAssistant = await getBookingAssistant();
+
+    const result = await bookingAssistant.invoke(
       {
-        message,
-        language,
+        messages: [new HumanMessage(message)],
+        language: "en",
+      },
+      {
+        configurable: {
+          thread_id: threadId,
+        },
       }
     );
 
-    const result =
-      await bookingAssistant.invoke({
-        messages: [
-          new HumanMessage(message),
-        ],
-
-        // Pass language to LangGraph
-        language,
-      });
-
-    const messages =
-      result.messages;
-
-    const lastMessage =
-      messages[messages.length - 1];
+    const messages = result.messages;
+    const lastMessage = messages[messages.length - 1];
 
     let answer = "";
 
-    if (
-      lastMessage instanceof AIMessage
-    ) {
-      if (
-        typeof lastMessage.content ===
-        "string"
-      ) {
-        answer =
-          lastMessage.content;
+    if (lastMessage instanceof AIMessage) {
+      if (typeof lastMessage.content === "string") {
+        answer = lastMessage.content;
       } else {
-        answer =
-          lastMessage.content
-            .map((item: any) => {
-              if (
-                typeof item ===
-                "string"
-              ) {
-                return item;
-              }
-
-              if (
-                item?.type ===
-                "text"
-              ) {
-                return item.text;
-              }
-
-              return "";
-            })
-            .filter(Boolean)
-            .join("");
+        answer = lastMessage.content
+          .map((item: any) => {
+            if (typeof item === "string") return item;
+            if (item?.type === "text") return item.text;
+            return "";
+          })
+          .filter(Boolean)
+          .join("");
       }
     }
 
     return NextResponse.json({
       success: true,
       answer,
-      language,
+      language: "en",
+      threadId,
     });
-
   } catch (error) {
-    console.error(
-      "BOOKING ASSISTANT ERROR:",
-      error
-    );
+    console.error("BOOKING ASSISTANT ERROR:", error);
 
     return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Unable to process your request.",
-      },
+      { success: false, message: "sorry we can't process your query. " },
       { status: 500 }
     );
   }

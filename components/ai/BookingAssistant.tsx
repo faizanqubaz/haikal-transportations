@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -13,6 +12,7 @@ import {
   Volume2,
   VolumeX,
   User,
+  RotateCcw,
 } from "lucide-react";
 
 import {
@@ -33,6 +33,7 @@ interface SpeechRecognitionEventLike {
         transcript: string;
       };
     };
+
     length: number;
   };
 }
@@ -43,28 +44,48 @@ interface SpeechRecognitionErrorEventLike {
 
 interface SpeechRecognitionInstance {
   continuous: boolean;
+
   interimResults: boolean;
+
   lang: string;
 
   start: () => void;
+
   stop: () => void;
+
   abort: () => void;
 
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
+  onstart:
+    (() => void) | null;
+
+  onend:
+    (() => void) | null;
 
   onresult:
-    | ((event: SpeechRecognitionEventLike) => void)
+    | ((
+        event: SpeechRecognitionEventLike
+      ) => void)
     | null;
 
   onerror:
-    | ((event: SpeechRecognitionErrorEventLike) => void)
+    | ((
+        event: SpeechRecognitionErrorEventLike
+      ) => void)
     | null;
 }
 
 interface SpeechRecognitionConstructor {
-  new (): SpeechRecognitionInstance;
+  new ():
+    SpeechRecognitionInstance;
 }
+
+
+// ============================================================
+// STORAGE KEY
+// ============================================================
+
+const THREAD_STORAGE_KEY =
+  "haikal-tours-booking-thread-id";
 
 
 // ============================================================
@@ -73,6 +94,9 @@ interface SpeechRecognitionConstructor {
 
 export default function BookingAssistant() {
   const [message, setMessage] =
+    useState("");
+
+  const [lastUserMessage, setLastUserMessage] =
     useState("");
 
   const [answer, setAnswer] =
@@ -93,19 +117,61 @@ export default function BookingAssistant() {
   const [speechSupported, setSpeechSupported] =
     useState(false);
 
+  const [threadId, setThreadId] =
+    useState("");
+
   const recognitionRef =
-    useRef<SpeechRecognitionInstance | null>(null);
-
-  const answerRef =
-    useRef<HTMLDivElement>(null);
-
+    useRef<SpeechRecognitionInstance | null>(
+      null
+    );
 
   // ==========================================================
-  // CHECK SPEECH SUPPORT
+  // CREATE / RESTORE THREAD
   // ==========================================================
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return;
+    }
+
+    const existingThread =
+      localStorage.getItem(
+        THREAD_STORAGE_KEY
+      );
+
+    if (existingThread) {
+      setThreadId(
+        existingThread
+      );
+
+      return;
+    }
+
+    const newThreadId =
+      crypto.randomUUID();
+
+    localStorage.setItem(
+      THREAD_STORAGE_KEY,
+      newThreadId
+    );
+
+    setThreadId(
+      newThreadId
+    );
+  }, []);
+
+  // ==========================================================
+  // SPEECH RECOGNITION
+  // ==========================================================
+
+  useEffect(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
       return;
     }
 
@@ -113,6 +179,7 @@ export default function BookingAssistant() {
       (
         window as Window & {
           SpeechRecognition?: SpeechRecognitionConstructor;
+
           webkitSpeechRecognition?: SpeechRecognitionConstructor;
         }
       ).SpeechRecognition ||
@@ -120,45 +187,67 @@ export default function BookingAssistant() {
         window as Window & {
           webkitSpeechRecognition?: SpeechRecognitionConstructor;
         }
-      ).webkitSpeechRecognition;
+      )
+        .webkitSpeechRecognition;
 
-    if (SpeechRecognition) {
-      setSpeechSupported(true);
+    if (!SpeechRecognition) {
+      setSpeechSupported(
+        false
+      );
 
-      const recognition =
-        new SpeechRecognition();
+      return;
+    }
 
-      recognition.continuous = false;
-      recognition.interimResults = true;
+    setSpeechSupported(
+      true
+    );
 
-      // English speech recognition.
-      // Change to "ur-PK" if you want Urdu.
-      recognition.lang = "en-US";
+    const recognition =
+      new SpeechRecognition();
 
-      recognition.onstart = () => {
+    recognition.continuous =
+      false;
+
+    recognition.interimResults =
+      true;
+
+    // English (US)
+    recognition.lang =
+      "en-US";
+
+    recognition.onstart =
+      () => {
         setListening(true);
       };
 
-      recognition.onend = () => {
+    recognition.onend =
+      () => {
         setListening(false);
       };
 
-      recognition.onresult = (event) => {
-        let transcript = "";
+    recognition.onresult =
+      (event) => {
+        let transcript =
+          "";
 
         for (
           let i = 0;
-          i < event.results.length;
+          i <
+          event.results.length;
           i++
         ) {
           transcript +=
-            event.results[i][0].transcript;
+            event.results[i][0]
+              .transcript;
         }
 
-        setMessage(transcript);
+        setMessage(
+          transcript
+        );
       };
 
-      recognition.onerror = (event) => {
+    recognition.onerror =
+      (event) => {
         console.error(
           "Speech recognition error:",
           event.error
@@ -171,7 +260,7 @@ export default function BookingAssistant() {
           "not-allowed"
         ) {
           setAnswer(
-            "Microphone permission was denied. Please allow microphone access in your browser."
+            "Microphone access was denied. Please allow microphone access in your browser."
           );
         } else if (
           event.error ===
@@ -182,14 +271,13 @@ export default function BookingAssistant() {
           );
         } else {
           setAnswer(
-            "I couldn't hear you properly. Please try again."
+            "There was a problem understanding the audio. Please try again."
           );
         }
       };
 
-      recognitionRef.current =
-        recognition;
-    }
+    recognitionRef.current =
+      recognition;
 
     return () => {
       recognitionRef.current?.abort();
@@ -198,15 +286,14 @@ export default function BookingAssistant() {
     };
   }, []);
 
-
   // ==========================================================
-  // START VOICE INPUT
+  // START LISTENING
   // ==========================================================
 
   function startListening() {
     if (!speechSupported) {
       setAnswer(
-        "Voice input is not supported by this browser. Please use Chrome or Edge."
+        "Voice input isn't available in your browser. Please use Chrome or Edge."
       );
 
       return;
@@ -216,11 +303,11 @@ export default function BookingAssistant() {
       return;
     }
 
-    // Stop currently speaking response.
     stopSpeaking();
 
     try {
       setMessage("");
+
       setAnswer("");
 
       recognitionRef.current?.start();
@@ -232,21 +319,174 @@ export default function BookingAssistant() {
     }
   }
 
-
   // ==========================================================
-  // STOP VOICE INPUT
+  // STOP LISTENING
   // ==========================================================
 
   function stopListening() {
     try {
       recognitionRef.current?.stop();
     } catch (error) {
-      console.error(error);
+      console.error(
+        error
+      );
     }
 
-    setListening(false);
+    setListening(
+      false
+    );
   }
 
+  // ==========================================================
+  // GET AN ENGLISH VOICE
+  // ==========================================================
+
+  function getEnglishVoice(): Promise<SpeechSynthesisVoice | null> {
+    return new Promise((resolve) => {
+      if (
+        typeof window === "undefined" ||
+        !("speechSynthesis" in window)
+      ) {
+        resolve(null);
+        return;
+      }
+
+      const pickVoice = () => {
+        const voices =
+          window.speechSynthesis.getVoices();
+
+        if (!voices.length) {
+          return null;
+        }
+
+        // Prefer an exact en-US voice, then any English voice,
+        // then fall back to whatever is first available.
+        return (
+          voices.find((v) => v.lang === "en-US") ||
+          voices.find((v) => v.lang?.startsWith("en")) ||
+          voices[0] ||
+          null
+        );
+      };
+
+      const existing = pickVoice();
+
+      if (existing) {
+        resolve(existing);
+        return;
+      }
+
+      // Voices often load asynchronously on first page load —
+      // wait for the event instead of giving up immediately.
+      const handleVoicesChanged = () => {
+        window.speechSynthesis.removeEventListener(
+          "voiceschanged",
+          handleVoicesChanged
+        );
+
+        resolve(pickVoice());
+      };
+
+      window.speechSynthesis.addEventListener(
+        "voiceschanged",
+        handleVoicesChanged
+      );
+
+      // Safety timeout in case the event never fires.
+      setTimeout(() => {
+        window.speechSynthesis.removeEventListener(
+          "voiceschanged",
+          handleVoicesChanged
+        );
+
+        resolve(pickVoice());
+      }, 1000);
+    });
+  }
+
+  // ==========================================================
+  // SPEAK ANSWER
+  // ==========================================================
+
+  async function speakAnswer(
+    text: string
+  ) {
+    if (
+      typeof window ===
+        "undefined" ||
+      !(
+        "speechSynthesis" in
+        window
+      )
+    ) {
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utterance =
+      new SpeechSynthesisUtterance(
+        text
+      );
+
+    // English (US)
+    utterance.lang =
+      "en-US";
+
+    utterance.rate =
+      0.9;
+
+    utterance.pitch =
+      1;
+
+    const voice = await getEnglishVoice();
+
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
+
+    utterance.onstart =
+      () => {
+        setSpeaking(true);
+      };
+
+    utterance.onend =
+      () => {
+        setSpeaking(false);
+      };
+
+    utterance.onerror =
+      (event) => {
+        console.error(
+          "Speech synthesis error:",
+          event
+        );
+
+        setSpeaking(false);
+      };
+
+    window.speechSynthesis.speak(
+      utterance
+    );
+  }
+
+  // ==========================================================
+  // STOP SPEAKING
+  // ==========================================================
+
+  function stopSpeaking() {
+    if (
+      typeof window !==
+        "undefined" &&
+      "speechSynthesis" in
+        window
+    ) {
+      window.speechSynthesis.cancel();
+    }
+
+    setSpeaking(false);
+  }
 
   // ==========================================================
   // ASK ASSISTANT
@@ -256,25 +496,34 @@ export default function BookingAssistant() {
     customMessage?: string
   ) {
     const currentMessage =
-      customMessage ?? message;
+      customMessage ??
+      message;
 
     if (
       !currentMessage.trim() ||
-      loading
+      loading ||
+      !threadId
     ) {
       return;
     }
 
-    // Stop recording if still active.
     if (listening) {
       stopListening();
     }
 
     try {
       setLoading(true);
+
       setAnswer("");
 
       stopSpeaking();
+
+      // Store the message separately.
+      // This is important because we clear the
+      // input after sending.
+      setLastUserMessage(
+        currentMessage
+      );
 
       const response =
         await fetch(
@@ -288,7 +537,10 @@ export default function BookingAssistant() {
             },
 
             body: JSON.stringify({
-              message: currentMessage,
+              message:
+                currentMessage,
+
+              threadId,
             }),
           }
         );
@@ -307,89 +559,37 @@ export default function BookingAssistant() {
       }
 
       const assistantAnswer =
-        data.answer;
+        data.answer ||
+        "Sorry, no response was received.";
 
-      setAnswer(assistantAnswer);
-      setMessage("");
-
-      // Speak Gemini's response.
-      speakAnswer(
+      setAnswer(
         assistantAnswer
       );
 
+      setMessage("");
+
+      speakAnswer(
+        assistantAnswer
+      );
     } catch (error) {
-      console.error(error);
+      console.error(
+        error
+      );
 
       const errorMessage =
-        "Sorry, I couldn't process your request. Please try again.";
+        "Sorry, your request couldn't be processed. Please try again.";
 
-      setAnswer(errorMessage);
+      setAnswer(
+        errorMessage
+      );
 
-      speakAnswer(errorMessage);
+      speakAnswer(
+        errorMessage
+      );
     } finally {
       setLoading(false);
     }
   }
-
-
-  // ==========================================================
-  // TEXT TO SPEECH
-  // ==========================================================
-
-  function speakAnswer(
-    text: string
-  ) {
-    if (
-      typeof window === "undefined" ||
-      !("speechSynthesis" in window)
-    ) {
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const utterance =
-      new SpeechSynthesisUtterance(
-        text
-      );
-
-    utterance.lang = "en-US";
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-
-    utterance.onstart = () => {
-      setSpeaking(true);
-    };
-
-    utterance.onend = () => {
-      setSpeaking(false);
-    };
-
-    utterance.onerror = () => {
-      setSpeaking(false);
-    };
-
-    window.speechSynthesis.speak(
-      utterance
-    );
-  }
-
-
-  // ==========================================================
-  // STOP TEXT TO SPEECH
-  // ==========================================================
-
-  function stopSpeaking() {
-    if (
-      typeof window !== "undefined" &&
-      "speechSynthesis" in window
-    ) {
-      window.speechSynthesis.cancel();
-    }
-
-    setSpeaking(false);
-  }
-
 
   // ==========================================================
   // QUICK QUESTION
@@ -398,11 +598,44 @@ export default function BookingAssistant() {
   function handleQuickQuestion(
     question: string
   ) {
-    setMessage(question);
+    setMessage(
+      question
+    );
 
-    askAssistant(question);
+    askAssistant(
+      question
+    );
   }
 
+  // ==========================================================
+  // NEW CONVERSATION
+  // ==========================================================
+
+  function startNewConversation() {
+    stopListening();
+
+    stopSpeaking();
+
+    const newThreadId =
+      crypto.randomUUID();
+
+    localStorage.setItem(
+      THREAD_STORAGE_KEY,
+      newThreadId
+    );
+
+    setThreadId(
+      newThreadId
+    );
+
+    setMessage("");
+
+    setLastUserMessage("");
+
+    setAnswer("");
+
+    setLoading(false);
+  }
 
   // ==========================================================
   // ENTER KEY
@@ -421,22 +654,22 @@ export default function BookingAssistant() {
     }
   }
 
-
   // ==========================================================
   // UI
   // ==========================================================
 
   return (
     <div className="relative">
-
-      {/* ====================================================
+      {/* ==================================================
           FLOATING BUTTON
-      ===================================================== */}
+      ================================================== */}
 
       {!open && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() =>
+            setOpen(true)
+          }
           aria-label="Open booking assistant"
           className="
             group
@@ -461,9 +694,6 @@ export default function BookingAssistant() {
             sm:w-16
           "
         >
-
-          {/* Pulse */}
-
           <span
             className="
               absolute
@@ -486,8 +716,6 @@ export default function BookingAssistant() {
             "
           />
 
-          {/* Online */}
-
           <span
             className="
               absolute
@@ -501,14 +729,12 @@ export default function BookingAssistant() {
               bg-green-500
             "
           />
-
         </button>
       )}
 
-
-      {/* ====================================================
+      {/* ==================================================
           CHAT WINDOW
-      ===================================================== */}
+      ================================================== */}
 
       {open && (
         <div
@@ -536,8 +762,7 @@ export default function BookingAssistant() {
             sm:max-w-[calc(100vw-2rem)]
           "
         >
-
-          {/* =================================================
+          {/* ==================================================
               HEADER
           ================================================== */}
 
@@ -553,9 +778,7 @@ export default function BookingAssistant() {
               sm:px-5
             "
           >
-
             <div className="flex items-center gap-3">
-
               <div
                 className="
                   flex
@@ -571,9 +794,7 @@ export default function BookingAssistant() {
               </div>
 
               <div>
-
                 <div className="flex items-center gap-2">
-
                   <h2 className="text-sm font-semibold">
                     Booking Assistant
                   </h2>
@@ -586,70 +807,92 @@ export default function BookingAssistant() {
                       bg-green-400
                     "
                   />
-
                 </div>
 
                 <p className="mt-0.5 text-xs text-white/60">
                   Haikal Tours AI Assistant
                 </p>
-
               </div>
-
             </div>
 
+            <div className="flex items-center gap-1">
+              {/* New chat */}
 
-            {/* Close */}
+              <button
+                type="button"
+                onClick={
+                  startNewConversation
+                }
+                aria-label="Start new conversation"
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-full
+                  text-white/70
+                  transition
+                  hover:bg-white/10
+                  hover:text-white
+                "
+              >
+                <RotateCcw
+                  size={16}
+                />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                stopListening();
-                stopSpeaking();
-              }}
-              aria-label="Close booking assistant"
-              className="
-                flex
-                h-9
-                w-9
-                items-center
-                justify-center
-                rounded-full
-                text-white/70
-                transition
-                hover:bg-white/10
-                hover:text-white
-              "
-            >
-              <ChevronDown size={20} />
-            </button>
+              {/* Close */}
 
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(
+                    false
+                  );
+
+                  stopListening();
+
+                  stopSpeaking();
+                }}
+                aria-label="Close booking assistant"
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-full
+                  text-white/70
+                  transition
+                  hover:bg-white/10
+                  hover:text-white
+                "
+              >
+                <ChevronDown
+                  size={20}
+                />
+              </button>
+            </div>
           </div>
 
-
-          {/* =================================================
-              CHAT BODY
+          {/* ==================================================
+              BODY
           ================================================== */}
 
           <div
-            ref={answerRef}
             className="
               min-h-0
               flex-1
               overflow-y-auto
             "
           >
-
-            {/* =================================================
-                WELCOME STATE
-            ================================================== */}
+            {/* Welcome */}
 
             {!answer &&
               !loading && (
                 <div className="p-4 sm:p-5">
-
                   <div className="flex gap-3">
-
                     <div
                       className="
                         mt-1
@@ -685,22 +928,16 @@ export default function BookingAssistant() {
                           text-gray-700
                         "
                       >
-                        Hi! 👋
+                        Hi there! 👋
                         <br />
-                        I can help you check
-                        buses, routes,
-                        schedules and
-                        available seats.
+                        I can help you with buses,
+                        routes, schedules, seat
+                        availability, and bookings.
                       </p>
                     </div>
-
                   </div>
 
-
-                  {/* Quick Questions */}
-
                   <div className="mt-5">
-
                     <p
                       className="
                         mb-2
@@ -715,12 +952,11 @@ export default function BookingAssistant() {
                     </p>
 
                     <div className="flex flex-col gap-2">
-
                       <button
                         type="button"
                         onClick={() =>
                           handleQuickQuestion(
-                            "Which buses have available seats?"
+                            "Which buses have seats available?"
                           )
                         }
                         className="
@@ -738,16 +974,14 @@ export default function BookingAssistant() {
                           hover:text-teal-800
                         "
                       >
-                        Which buses have available
-                        seats?
+                        Which buses have seats available?
                       </button>
-
 
                       <button
                         type="button"
                         onClick={() =>
                           handleQuickQuestion(
-                            "Are seats A1 and A2 available on bus GB-102?"
+                            "Are seats A1 and A2 available on GB-102?"
                           )
                         }
                         className="
@@ -765,16 +999,14 @@ export default function BookingAssistant() {
                           hover:text-teal-800
                         "
                       >
-                        Are seats A1 and A2
-                        available on GB-102?
+                        Are seats A1 and A2 available on GB-102?
                       </button>
-
 
                       <button
                         type="button"
                         onClick={() =>
                           handleQuickQuestion(
-                            "What buses are available from Gilgit to Hunza?"
+                            "Show me buses from Gilgit to Hunza."
                           )
                         }
                         className="
@@ -792,27 +1024,18 @@ export default function BookingAssistant() {
                           hover:text-teal-800
                         "
                       >
-                        What buses are available
-                        from Gilgit to Hunza?
+                        Show me buses from Gilgit to Hunza
                       </button>
-
                     </div>
-
                   </div>
-
                 </div>
               )}
 
-
-            {/* =================================================
-                LOADING
-            ================================================== */}
+            {/* Loading */}
 
             {loading && (
               <div className="p-5">
-
                 <div className="flex items-start gap-2">
-
                   <div
                     className="
                       flex
@@ -838,9 +1061,7 @@ export default function BookingAssistant() {
                       py-3
                     "
                   >
-
                     <div className="flex items-center gap-2">
-
                       <Loader2
                         size={16}
                         className="animate-spin text-teal-700"
@@ -849,31 +1070,21 @@ export default function BookingAssistant() {
                       <span className="text-sm text-gray-500">
                         Checking availability...
                       </span>
-
                     </div>
-
                   </div>
-
                 </div>
-
               </div>
             )}
 
-
-            {/* =================================================
-                ANSWER
-            ================================================== */}
+            {/* Answer */}
 
             {answer &&
               !loading && (
                 <div className="space-y-4 p-4 sm:p-5">
-
                   {/* User */}
 
                   <div className="flex justify-end">
-
                     <div className="flex max-w-[88%] items-end gap-2">
-
                       <div
                         className="
                           rounded-2xl
@@ -886,8 +1097,7 @@ export default function BookingAssistant() {
                           text-white
                         "
                       >
-                        {message ||
-                          "Your booking question"}
+                        {lastUserMessage}
                       </div>
 
                       <div
@@ -905,16 +1115,12 @@ export default function BookingAssistant() {
                       >
                         <User size={14} />
                       </div>
-
                     </div>
-
                   </div>
-
 
                   {/* AI */}
 
                   <div className="flex items-start gap-2">
-
                     <div
                       className="
                         flex
@@ -931,7 +1137,6 @@ export default function BookingAssistant() {
                       <Bot size={16} />
                     </div>
 
-
                     <div
                       className="
                         max-w-[88%]
@@ -942,9 +1147,7 @@ export default function BookingAssistant() {
                         py-3
                       "
                     >
-
                       <div className="mb-2 flex items-center justify-between gap-4">
-
                         <p
                           className="
                             text-[10px]
@@ -956,9 +1159,6 @@ export default function BookingAssistant() {
                         >
                           Haikal AI
                         </p>
-
-
-                        {/* Voice control */}
 
                         {speaking ? (
                           <button
@@ -1007,9 +1207,7 @@ export default function BookingAssistant() {
                             Listen
                           </button>
                         )}
-
                       </div>
-
 
                       <p
                         className="
@@ -1021,19 +1219,14 @@ export default function BookingAssistant() {
                       >
                         {answer}
                       </p>
-
                     </div>
-
                   </div>
-
                 </div>
               )}
-
           </div>
 
-
-          {/* =================================================
-              INPUT AREA
+          {/* ==================================================
+              INPUT
           ================================================== */}
 
           <div
@@ -1045,10 +1238,7 @@ export default function BookingAssistant() {
               sm:p-4
             "
           >
-
-            {/* =================================================
-                VOICE BUTTON
-            ================================================== */}
+            {/* Voice */}
 
             <button
               type="button"
@@ -1070,11 +1260,13 @@ export default function BookingAssistant() {
                 text-sm
                 font-semibold
                 transition-all
+
                 ${
                   listening
                     ? "bg-red-50 text-red-600 ring-1 ring-red-200"
                     : "bg-teal-50 text-teal-800 hover:bg-teal-100"
                 }
+
                 ${
                   loading
                     ? "cursor-not-allowed opacity-50"
@@ -1082,29 +1274,28 @@ export default function BookingAssistant() {
                 }
               `}
             >
-
               {listening ? (
                 <>
-                  <MicOff size={18} />
+                  <MicOff
+                    size={18}
+                  />
 
-                  Listening... Tap to stop
+                  Listening... tap to stop
                 </>
               ) : (
                 <>
-                  <Mic size={18} />
+                  <Mic
+                    size={18}
+                  />
 
                   {speechSupported
                     ? "Tap to speak"
                     : "Voice unavailable"}
                 </>
               )}
-
             </button>
 
-
-            {/* =================================================
-                TEXT INPUT
-            ================================================== */}
+            {/* Text */}
 
             <div
               className="
@@ -1122,9 +1313,10 @@ export default function BookingAssistant() {
                 focus-within:ring-teal-100
               "
             >
-
               <input
-                value={message}
+                value={
+                  message
+                }
                 onChange={(e) =>
                   setMessage(
                     e.target.value
@@ -1133,11 +1325,13 @@ export default function BookingAssistant() {
                 onKeyDown={
                   handleKeyDown
                 }
-                disabled={loading}
+                disabled={
+                  loading
+                }
                 placeholder={
                   listening
                     ? "Listening..."
-                    : "Type a question..."
+                    : "Type your question..."
                 }
                 className="
                   min-w-0
@@ -1153,9 +1347,6 @@ export default function BookingAssistant() {
                 "
               />
 
-
-              {/* Send */}
-
               <button
                 type="button"
                 onClick={() =>
@@ -1163,7 +1354,8 @@ export default function BookingAssistant() {
                 }
                 disabled={
                   loading ||
-                  !message.trim()
+                  !message.trim() ||
+                  !threadId
                 }
                 aria-label="Send message"
                 className="
@@ -1182,37 +1374,29 @@ export default function BookingAssistant() {
                   disabled:opacity-40
                 "
               >
-
                 {loading ? (
                   <Loader2
                     size={18}
                     className="animate-spin"
                   />
                 ) : (
-                  <Send size={17} />
+                  <Send
+                    size={17}
+                  />
                 )}
-
               </button>
-
             </div>
-
-
-            {/* Footer */}
 
             <div className="mt-2 flex items-center justify-center gap-1 text-[10px] text-gray-400">
+              <Sparkles
+                size={10}
+              />
 
-              <Sparkles size={10} />
-
-              Haikal Tours AI • Booking assistant
-
+              Haikal Tours AI • Booking Assistant
             </div>
-
           </div>
-
         </div>
       )}
-
     </div>
   );
 }
-

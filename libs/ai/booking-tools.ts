@@ -46,6 +46,7 @@ export const searchAvailableBusses = tool(
         .map((seat) => seat.seatNumber);
 
         return {
+            busId: bus._id.toString(),
         busNumber: bus.busNumber,
         company: bus.company,
         route: bus.route,
@@ -301,10 +302,53 @@ export const getBooking = tool(
   }
 );
 
+export const createBooking = tool(
+  async ({
+    busId,
+    passengerName,
+    passengerEmail,
+    passengerPhone,
+    seats,
+  }) => {
+    // booking implementation
+  },
+  {
+    name: "create_booking",
+
+    description: `
+Create a passenger booking.
+
+IMPORTANT:
+Only call this tool after the passenger has explicitly confirmed
+the complete booking.
+
+The booking must contain:
+- busId
+- passenger name
+- passenger email
+- passenger phone
+- selected seats
+
+Never call this tool merely because the passenger says they want
+to book a bus. First show the booking summary and ask for explicit
+confirmation.
+`,
+
+    schema: z.object({
+      busId: z.string(),
+      passengerName: z.string(),
+      passengerEmail: z.string().email(),
+      passengerPhone: z.string(),
+      seats: z.array(z.string()).min(1),
+    }),
+  }
+);
+
 export const bookingTools = [
   searchAvailableBusses,
    getBusSeats,
   checkSeatAvailability,
   getBooking,
+   createBooking
 ];
 
