@@ -17,6 +17,7 @@ type Booking = {
 type Stats = {
   totalBookings: number;
   todaysBookings: number;
+  bookedSeats:number;
   activeBuses: number;
   passengerCount: number;
   todaysBookedSeats:number;

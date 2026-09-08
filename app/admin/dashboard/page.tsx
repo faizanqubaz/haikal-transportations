@@ -324,14 +324,14 @@ console.log('stats',stats)
     {
       title: "Total Bookings",
       value:
-        stats?.totalBookings ?? "—",
+        stats?.bookedSeats ?? "—",
       icon: CalendarCheck,
     },
 
     {
       title: "Today's Bookings",
       value:
-        stats?.todaysBookings ?? "—",
+        stats?.todaysBookedSeats ?? "—",
       icon: TrendingUp,
     },
 
@@ -344,7 +344,7 @@ console.log('stats',stats)
     {
       title: "Passengers",
       value:
-        stats?.totalBookings ?? "—",
+        stats?.bookedSeats ?? "—",
       icon: Users,
     },
   ];
