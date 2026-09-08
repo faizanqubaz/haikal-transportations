@@ -3,15 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { connectDB } from "@/libs/mongodb";
 import Bus from "@/models/Bus";
+import Booking from "@/models/Booking";
 
 import {
   createCacheKey,
+  deleteCache,
   getCache,
   setCache,
-  deleteCache,
 } from "@/libs/cache/api-cache";
 
-const BUS_CACHE_TTL = 30; // seconds
+const BUS_CACHE_TTL = 30;
 
 type Params = {
   params: Promise<{
@@ -33,7 +34,7 @@ export async function GET(
     console.log("FETCHING BUS BY ID:", id);
 
     // ========================================================
-    // VALIDATE ID BEFORE REDIS
+    // VALIDATE ID
     // ========================================================
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -82,6 +83,10 @@ export async function GET(
 
     await connectDB();
 
+    // ========================================================
+    // GET BUS
+    // ========================================================
+
     const bus = await Bus.findById(id).lean();
 
     if (!bus) {
@@ -94,32 +99,111 @@ export async function GET(
     }
 
     // ========================================================
+    // GET BOOKINGS FOR THIS BUS
+    // ========================================================
+    //
+    // We only need bookings that can currently occupy seats.
+    //
+    // pending  -> temporarily reserved
+    // approved -> confirmed
+    //
+    // rejected bookings should NOT contribute gender.
+    //
+    // ========================================================
+
+    const bookings = await Booking.find(
+      {
+        bus: new mongoose.Types.ObjectId(id),
+        status: {
+          $in: ["pending", "approved"],
+        },
+      },
+      {
+        seats: 1,
+        gender: 1,
+        status: 1,
+      }
+    ).lean();
+
+    console.log("BOOKINGS FOUND:", bookings.length);
+
+    // ========================================================
+    // CREATE SEAT -> BOOKING INFORMATION MAP
+    // ========================================================
+
+    const seatBookingMap = new Map<
+      string,
+      {
+        gender: "male" | "female" | null;
+        status: "pending" | "approved";
+      }
+    >();
+
+    for (const booking of bookings) {
+      for (const seatNumber of booking.seats || []) {
+        seatBookingMap.set(seatNumber, {
+          gender: booking.gender,
+          status: booking.status,
+        });
+      }
+    }
+
+    // ========================================================
+    // BUILD SEATS RESPONSE
+    // ========================================================
+
+    const seats = bus.seats.map((seat: any) => {
+      const booking = seatBookingMap.get(
+        seat.seatNumber
+      );
+
+      return {
+        seatNumber: seat.seatNumber,
+
+        status: seat.status,
+
+        gender:
+          booking?.gender ?? null,
+      };
+    });
+
+    // ========================================================
     // BUILD RESPONSE
     // ========================================================
 
     const result = {
       id: bus._id.toString(),
+
       busNumber: bus.busNumber,
+
       company: bus.company,
+
       driverPhone: bus.driverPhone,
 
       route: bus.route,
+
       pickup: bus.pickup,
+
       dropoff: bus.dropoff,
 
       date: bus.date,
 
       departure: bus.departure,
+
       arrival: bus.arrival,
+
       duration: bus.duration,
 
       price: bus.price,
+
       image: bus.image,
 
-      seats: bus.seats,
+      // IMPORTANT:
+      // Seats now contain gender
+      seats,
 
-      availableSeats: bus.seats.filter(
-        (seat: any) =>
+      availableSeats: seats.filter(
+        (seat) =>
           seat.status === "available"
       ).length,
     };
@@ -127,7 +211,9 @@ export async function GET(
     console.log("BUS FOUND:", {
       id: result.id,
       busNumber: result.busNumber,
-      availableSeats: result.availableSeats,
+      availableSeats:
+        result.availableSeats,
+      seats: result.seats,
     });
 
     const responseData = {
@@ -157,6 +243,7 @@ export async function GET(
       ...responseData,
       cached: false,
     });
+
   } catch (error) {
     console.error(
       "GET_BUS_BY_ID_ERROR:",

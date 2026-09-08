@@ -27,6 +27,15 @@ const BookingSchema = new Schema(
       trim: true,
     },
 
+    // Passenger gender
+    gender: {
+      type: String,
+      enum: ["male", "female"],
+      required: true,
+      lowercase: true,
+      trim: true,
+    },
+
     route: {
       type: String,
       required: true,
@@ -60,7 +69,7 @@ const BookingSchema = new Schema(
 
     status: {
       type: String,
-      enum:  ["pending", "approved", "rejected"],
+      enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
 
@@ -83,4 +92,5 @@ const BookingSchema = new Schema(
   }
 );
 
-export default models.Booking || model("Booking", BookingSchema);
+export default models.Booking ||
+  model("Booking", BookingSchema);

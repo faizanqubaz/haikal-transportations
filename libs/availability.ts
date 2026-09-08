@@ -1,10 +1,12 @@
 export type SeatStatus =
   | "available"
+  | "pending"
   | "booked"
   | "selected";
 
 export type Seat = {
    seatNumber: string;
+   gender?: "male" | "female" | null;
    status: "available" | "pending" | "booked";
 };
 
@@ -32,11 +34,17 @@ const createSeats = (
   const seats: Seat[] = [];
 
   for (let i = 1; i <= 40; i++) {
+    const seatNumber = String(i);
+
     seats.push({
-      seatNumber: String(i),
-      status: bookedSeats.includes(String(i))
+      seatNumber,
+
+      status: bookedSeats.includes(seatNumber)
         ? "booked"
         : "available",
+
+      // No passenger information in static/mock data
+      gender: null,
     });
   }
 

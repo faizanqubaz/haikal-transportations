@@ -28,16 +28,38 @@ export async function POST(req: NextRequest) {
     if (
       !passenger?.name ||
       !passenger?.email ||
-      !passenger?.phone
+      !passenger?.phone ||
+      !passenger?.gender
     ) {
       return NextResponse.json(
         {
           error:
-            "Passenger name, email and phone are required",
+            "Passenger name, email, gender and phone are required",
         },
         { status: 400 }
       );
     }
+
+    // ============================================
+    // VALIDATE GENDER
+    // ============================================
+
+    const gender = String(passenger.gender)
+      .trim()
+      .toLowerCase();
+console.log('gender',gender)
+    if (!["male", "female"].includes(gender)) {
+      return NextResponse.json(
+        {
+          error: "Gender must be either male or female",
+        },
+        { status: 400 }
+      );
+    }
+
+    // ============================================
+    // VALIDATE BUS ID
+    // ============================================
 
     if (!busId) {
       return NextResponse.json(
@@ -48,6 +70,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ============================================
+    // VALIDATE SEATS
+    // ============================================
+
     if (!Array.isArray(seats) || seats.length === 0) {
       return NextResponse.json(
         {
@@ -57,9 +83,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Remove duplicate seats and normalize them
     const selectedSeats = [
-      ...new Set(seats.map((seat) => String(seat).trim())),
+      ...new Set(
+        seats.map((seat) =>
+          String(seat).trim()
+        )
+      ),
     ];
+
+    // Make sure no empty seat values exist
+    if (
+      selectedSeats.length === 0 ||
+      selectedSeats.some((seat) => !seat)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Invalid seat selection",
+        },
+        { status: 400 }
+      );
+    }
 
     let createdBooking: any = null;
 
@@ -72,7 +116,9 @@ export async function POST(req: NextRequest) {
       // FIND BUS
       // --------------------------------------------
 
-      const bus = await Bus.findById(busId).session(session);
+      const bus = await Bus.findById(busId).session(
+        session
+      );
 
       if (!bus) {
         throw new Error("BUS_NOT_FOUND");
@@ -95,7 +141,8 @@ export async function POST(req: NextRequest) {
       for (const seatNumber of selectedSeats) {
         const seat = bus.seats.find(
           (s) =>
-            String(s.seatNumber).trim() === seatNumber
+            String(s.seatNumber).trim() ===
+            seatNumber
         );
 
         console.log("CHECKING SEAT:", {
@@ -104,17 +151,27 @@ export async function POST(req: NextRequest) {
           status: seat?.status,
         });
 
-        if (!seat || seat.status !== "available") {
-          unavailableSeats.push(seatNumber);
+        if (
+          !seat ||
+          seat.status !== "available"
+        ) {
+          unavailableSeats.push(
+            seatNumber
+          );
         }
       }
+
+      // --------------------------------------------
+      // SEATS NOT AVAILABLE
+      // --------------------------------------------
 
       if (unavailableSeats.length > 0) {
         const error: any = new Error(
           "SEATS_UNAVAILABLE"
         );
 
-        error.unavailableSeats = unavailableSeats;
+        error.unavailableSeats =
+          unavailableSeats;
 
         throw error;
       }
@@ -124,7 +181,11 @@ export async function POST(req: NextRequest) {
       // --------------------------------------------
 
       bus.seats.forEach((seat) => {
-        if (selectedSeats.includes(seat.seatNumber)) {
+        if (
+          selectedSeats.includes(
+            String(seat.seatNumber).trim()
+          )
+        ) {
           seat.status = "pending";
         }
       });
@@ -139,8 +200,14 @@ export async function POST(req: NextRequest) {
         `${bus.date}T00:00:00`
       );
 
-      if (Number.isNaN(travelDate.getTime())) {
-        throw new Error("INVALID_TRAVEL_DATE");
+      if (
+        Number.isNaN(
+          travelDate.getTime()
+        )
+      ) {
+        throw new Error(
+          "INVALID_TRAVEL_DATE"
+        );
       }
 
       // --------------------------------------------
@@ -155,37 +222,51 @@ export async function POST(req: NextRequest) {
       // CREATE BOOKING
       // --------------------------------------------
 
-      const bookings = await Booking.create(
-        [
-          {
-            bookingRef,
+      const bookings =
+        await Booking.create(
+          [
+            {
+              bookingRef,
 
-            passengerName: passenger.name,
-            passengerEmail: passenger.email,
-            passengerPhone: passenger.phone,
+              passengerName:
+                passenger.name.trim(),
 
-            route:
-              bus.route ||
-              `${bus.pickup} → ${bus.dropoff}`,
+              passengerEmail:
+                passenger.email
+                  .trim()
+                  .toLowerCase(),
 
-            bus: bus._id,
+              passengerPhone:
+                passenger.phone.trim(),
 
-            seats: selectedSeats,
+              // NEW
+              gender,
 
-            travelDate,
+              route:
+                bus.route ||
+                `${bus.pickup} → ${bus.dropoff}`,
 
-            travelTime: bus.departure,
+              bus: bus._id,
 
-            status: "pending",
+              seats: selectedSeats,
 
-            emailSent: false,
-            whatsappSent: false,
-          },
-        ],
-        { session }
-      );
+              travelDate,
 
-      createdBooking = bookings[0];
+              travelTime:
+                bus.departure,
+
+              status: "pending",
+
+              emailSent: false,
+
+              whatsappSent: false,
+            },
+          ],
+          { session }
+        );
+
+      createdBooking =
+        bookings[0];
 
       console.log(
         "BOOKING CREATED INSIDE TRANSACTION:",
@@ -201,13 +282,21 @@ export async function POST(req: NextRequest) {
           {
             type: "booking",
 
-            title: "New Booking Request",
+            title:
+              "New Booking Request",
 
-            message: `${passenger.name} requested ${selectedSeats.length
-              } seat${selectedSeats.length > 1 ? "s" : ""} on ${bus.busNumber
-              }`,
+            message: `${passenger.name} requested ${
+              selectedSeats.length
+            } seat${
+              selectedSeats.length > 1
+                ? "s"
+                : ""
+            } on ${
+              bus.busNumber
+            }`,
 
-            bookingId: createdBooking._id,
+            bookingId:
+              createdBooking._id,
 
             read: false,
           },
@@ -233,12 +322,36 @@ export async function POST(req: NextRequest) {
           "Your booking request has been submitted and is pending approval.",
 
         booking: {
-          _id: createdBooking._id,
-          bookingRef: createdBooking.bookingRef,
-          status: createdBooking.status,
-          seats: createdBooking.seats,
-          travelDate: createdBooking.travelDate,
-          travelTime: createdBooking.travelTime,
+          _id:
+            createdBooking._id,
+
+          bookingRef:
+            createdBooking.bookingRef,
+
+          status:
+            createdBooking.status,
+
+          passengerName:
+            createdBooking.passengerName,
+
+          passengerEmail:
+            createdBooking.passengerEmail,
+
+          passengerPhone:
+            createdBooking.passengerPhone,
+
+          // NEW
+          gender:
+            createdBooking.gender,
+
+          seats:
+            createdBooking.seats,
+
+          travelDate:
+            createdBooking.travelDate,
+
+          travelTime:
+            createdBooking.travelTime,
         },
       },
       { status: 201 }
@@ -253,13 +366,18 @@ export async function POST(req: NextRequest) {
     // SEATS UNAVAILABLE
     // ============================================
 
-    if (error.message === "SEATS_UNAVAILABLE") {
+    if (
+      error.message ===
+      "SEATS_UNAVAILABLE"
+    ) {
       return NextResponse.json(
         {
           error:
             "Some selected seats are no longer available",
+
           unavailableSeats:
-            error.unavailableSeats || [],
+            error.unavailableSeats ||
+            [],
         },
         { status: 409 }
       );
@@ -269,7 +387,10 @@ export async function POST(req: NextRequest) {
     // BUS NOT FOUND
     // ============================================
 
-    if (error.message === "BUS_NOT_FOUND") {
+    if (
+      error.message ===
+      "BUS_NOT_FOUND"
+    ) {
       return NextResponse.json(
         {
           error: "Bus not found",
@@ -282,10 +403,14 @@ export async function POST(req: NextRequest) {
     // INVALID DATE
     // ============================================
 
-    if (error.message === "INVALID_TRAVEL_DATE") {
+    if (
+      error.message ===
+      "INVALID_TRAVEL_DATE"
+    ) {
       return NextResponse.json(
         {
-          error: "Invalid bus travel date",
+          error:
+            "Invalid bus travel date",
         },
         { status: 400 }
       );
@@ -299,8 +424,10 @@ export async function POST(req: NextRequest) {
       {
         error:
           "Something went wrong while creating your booking",
+
         details:
-          process.env.NODE_ENV === "development"
+          process.env.NODE_ENV ===
+          "development"
             ? error.message
             : undefined,
       },
@@ -311,19 +438,25 @@ export async function POST(req: NextRequest) {
   }
 }
 
-
+// ============================================================
+// GET BOOKINGS
+// ============================================================
 
 export async function GET() {
   try {
     await connectDB();
 
-    const bookings = await Booking.find({})
-      .populate("bus", "busNumber route")
-      .sort({
-        createdAt: -1,
-      })
-      .lean();
-
+    const bookings =
+      await Booking.find({})
+        .populate(
+          "bus",
+          "busNumber route"
+        )
+        .sort({
+          createdAt: -1,
+        })
+        .lean();
+console.log('bookings',bookings)
     return NextResponse.json({
       success: true,
       bookings,
@@ -337,7 +470,8 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: "Unable to fetch bookings",
+        error:
+          "Unable to fetch bookings",
         bookings: [],
       },
       {

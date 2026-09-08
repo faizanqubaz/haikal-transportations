@@ -2,6 +2,7 @@ type Booking = {
   _id: string;
   bookingRef: string;
   passengerName: string;
+  gender:string;
   passengerPhone: string;
   route: string;
   bus?: {

@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Check,
   Loader2,
+  BookUser,
 } from "lucide-react";
 
 const menuItems = [
@@ -47,6 +48,12 @@ const menuItems = [
     href: "/admin/trips",
     icon: Bus,
   },
+  {
+    name:"Add Booking",
+    href:'/admin/custom-booking',
+    icon:BookUser
+  }
+  ,
  
   {
     name: "Drivers",
@@ -1035,10 +1042,15 @@ function handleNotificationClick(notification: AdminNotification) {
                       <th className="px-5 py-4 font-semibold">
                         Bus
                       </th>
+                       <th className="px-5 py-4 font-semibold">
+                        Gender
+                      </th>
 
                       <th className="px-5 py-4 font-semibold">
                         Status
                       </th>
+
+                     
 
                     </tr>
 
@@ -1150,6 +1162,24 @@ function handleNotificationClick(notification: AdminNotification) {
 
                           </td>
 
+                          
+                             <td className="px-5 py-4">
+
+                            <Link
+                              href={`/admin/bookings/${booking._id}`}
+                              className="block"
+                            >
+
+                              <p className="max-w-[170px] truncate text-xs text-gray-600">
+                                {
+                                  booking.gender
+                                }
+                              </p>
+
+                            </Link>
+
+                          </td>
+
                           <td className="px-5 py-4">
 
                             <Link
@@ -1190,6 +1220,7 @@ function handleNotificationClick(notification: AdminNotification) {
                             </Link>
 
                           </td>
+
 
                         </tr>
                       )

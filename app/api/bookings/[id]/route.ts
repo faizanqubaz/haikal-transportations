@@ -24,6 +24,7 @@ const EDITABLE_FIELDS = [
   "travelDate",
   "travelTime",
   "status",
+  'gender'
 ] as const;
 
 
@@ -387,7 +388,7 @@ export async function PATCH(
 
 
     const body = await req.json();
-
+console.log('editbody',body)
 
     // ----------------------------------------------------------
     // VALIDATE STATUS

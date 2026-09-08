@@ -51,6 +51,7 @@ type Booking = {
   passengerName: string;
   passengerEmail?: string;
   passengerPhone?: string;
+  gender?:string;
   route?: string;
   seats: string[];
   travelDate: string;
@@ -523,6 +524,10 @@ export default function TodayTripDetailsPage() {
                     Seats
                   </th>
 
+                   <th className="px-5 py-4 font-semibold">
+                    Gender
+                  </th>
+
                   <th className="px-5 py-4 font-semibold">
                     Status
                   </th>
@@ -658,6 +663,16 @@ export default function TodayTripDetailsPage() {
                               )
                             )}
                           </div>
+                        </td>
+
+                        {/* gender */}
+                         <td className="px-5 py-4">
+                           <p className="text-xs font-bold text-gray-700">
+                            {
+                              booking.gender ||
+                              "-"
+                            }
+                          </p>
                         </td>
 
                         {/* STATUS */}
