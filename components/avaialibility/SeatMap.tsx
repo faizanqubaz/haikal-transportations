@@ -88,10 +88,36 @@ export default function SeatMap({
       {/* ======================================================
           BUS FRONT
       ====================================================== */}
+{/* ======================================================
+    BUS FRONT
+====================================================== */}
 
-      <div className="mx-auto mb-5 max-w-[320px] rounded-t-[50%] border-b-2 border-gray-300 bg-white py-3 text-center text-[10px] font-bold tracking-[0.25em] text-gray-400">
-        FRONT
-      </div>
+<div className="mx-auto mb-5 grid max-w-[420px] grid-cols-[1fr_auto_1fr] items-center gap-3">
+  {/* LEFT FRONT */}
+  <div className="flex items-center justify-end">
+    <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-center shadow-sm">
+      <span className="block text-[8px] font-bold tracking-[0.12em] text-gray-400 sm:text-[9px]">
+        LEFT FRONT
+      </span>
+    </div>
+  </div>
+
+  {/* FRONT */}
+  <div className="rounded-t-[50%] border-b-2 border-gray-300 bg-white px-8 py-3 text-center">
+    <span className="text-[10px] font-bold tracking-[0.25em] text-gray-400">
+      FRONT
+    </span>
+  </div>
+
+  {/* RIGHT FRONT */}
+  <div className="flex items-center justify-start">
+    <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-center shadow-sm">
+      <span className="block text-[8px] font-bold tracking-[0.12em] text-gray-400 sm:text-[9px]">
+        RIGHT FRONT
+      </span>
+    </div>
+  </div>
+</div>
 
       {/* ======================================================
           SEATS

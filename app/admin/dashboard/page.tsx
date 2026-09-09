@@ -1765,374 +1765,392 @@ function handleNotificationClick(notification: AdminNotification) {
           will NOT remove this modal.
       ====================================================== */}
 
-      {selectedNotification?.bookingId && (
-        <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    {/* =====================================================
+    PENDING BOOKING REQUEST MODAL
+===================================================== */}
+
+{/* =====================================================
+    PENDING BOOKING REQUEST MODAL
+====================================================== */}
+
+{selectedNotification?.bookingId && (
+  <div
+    className="
+      fixed inset-0 z-[10000]
+      flex items-center justify-center
+      bg-black/50
+      p-2 sm:p-4
+      backdrop-blur-sm
+    "
+    onClick={() =>
+      setSelectedNotification(null)
+    }
+  >
+    <div
+      className="
+        flex
+        w-full
+        max-w-xl
+        max-h-[calc(100dvh-16px)]
+        flex-col
+        overflow-hidden
+        rounded-2xl
+        bg-white
+        shadow-2xl
+        sm:max-h-[calc(100vh-32px)]
+        sm:rounded-3xl
+      "
+      onClick={(e) =>
+        e.stopPropagation()
+      }
+    >
+
+      {/* =================================================
+          COMPACT MOBILE HEADER
+      ================================================== */}
+
+      <div
+        className="
+          flex
+          shrink-0
+          items-center
+          justify-between
+          gap-3
+          border-b
+          border-gray-100
+          bg-white
+          px-3
+          py-3
+          sm:px-6
+          sm:py-5
+        "
+      >
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+
+          {/* ICON */}
+
+          <div
+            className="
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              bg-red-50
+              sm:h-10
+              sm:w-10
+              sm:rounded-xl
+            "
+          >
+            <CalendarCheck
+              size={17}
+              className="text-red-500 sm:h-[19px] sm:w-[19px]"
+            />
+          </div>
+
+          {/* TITLE */}
+
+          <div className="min-w-0">
+
+            <h3
+              className="
+                truncate
+                text-sm
+                font-black
+                leading-tight
+                text-gray-900
+                sm:text-base
+              "
+            >
+              Pending Booking Request
+            </h3>
+
+            <p
+              className="
+                mt-0.5
+                truncate
+                text-[10px]
+                text-gray-400
+                sm:text-xs
+              "
+            >
+              Review and approve this reservation
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* CLOSE BUTTON */}
+
+        <button
+          type="button"
           onClick={() =>
             setSelectedNotification(null)
           }
+          className="
+            flex
+            h-8
+            w-8
+            shrink-0
+            items-center
+            justify-center
+            rounded-lg
+            text-gray-400
+            transition
+            hover:bg-gray-100
+            hover:text-gray-700
+            sm:h-9
+            sm:w-9
+            sm:rounded-xl
+          "
         >
+          <X size={17} />
+        </button>
 
-          <div
-            className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-            onClick={(e) =>
-              e.stopPropagation()
+      </div>
+
+      {/* =================================================
+          SCROLLABLE BOOKING DETAILS
+      ================================================== */}
+
+      <div
+        className="
+          min-h-0
+          flex-1
+          overflow-y-auto
+          overscroll-contain
+          space-y-3
+          p-3
+          sm:space-y-4
+          sm:p-6
+        "
+      >
+
+        {/* =============================================
+            BOOKING REFERENCE
+        ============================================== */}
+
+        <div
+          className="
+            rounded-xl
+            bg-gray-50
+            p-3
+            sm:rounded-2xl
+            sm:p-4
+          "
+        >
+          <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400 sm:text-[10px]">
+            Booking Reference
+          </p>
+
+          <p className="mt-1 text-base font-black text-teal-700 sm:text-lg">
+            {
+              selectedNotification
+                .bookingId
+                .bookingRef
             }
-          >
+          </p>
 
-            {/* HEADER */}
+        </div>
 
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
+        {/* =============================================
+            PASSENGER
+        ============================================== */}
 
-              <div>
+        <div
+          className="
+            rounded-xl
+            border
+            border-gray-100
+            p-3
+            sm:rounded-2xl
+            sm:p-4
+          "
+        >
+          <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-400 sm:mb-3 sm:text-xs">
+            Passenger
+          </p>
 
-                <div className="flex items-center gap-2">
+          <div className="space-y-2">
 
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
+            {/* NAME */}
 
-                    <CalendarCheck
-                      size={19}
-                      className="text-red-500"
-                    />
+            <div className="flex items-center justify-between gap-3">
 
-                  </div>
+              <span className="shrink-0 text-xs text-gray-400 sm:text-sm">
+                Name
+              </span>
 
-                  <div>
-
-                    <h3 className="font-black text-gray-900">
-                      Pending Booking
-                      Request
-                    </h3>
-
-                    <p className="text-xs text-gray-400">
-                      Review and approve
-                      this reservation
-                    </p>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedNotification(
-                    null
-                  )
+              <span className="min-w-0 truncate text-right text-xs font-bold text-gray-900 sm:text-sm">
+                {
+                  selectedNotification
+                    .bookingId
+                    .passengerName
                 }
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100"
-              >
-                <X size={18} />
-              </button>
+              </span>
 
             </div>
 
-            {/* BOOKING DETAILS */}
+            {/* PHONE */}
 
-            <div className="space-y-4 p-6">
+            <div className="flex items-center justify-between gap-3">
 
-              {/* BOOKING REFERENCE */}
+              <span className="shrink-0 text-xs text-gray-400 sm:text-sm">
+                Phone
+              </span>
 
-              <div className="rounded-2xl bg-gray-50 p-4">
+              <span className="min-w-0 truncate text-right text-xs font-bold text-gray-900 sm:text-sm">
+                {
+                  selectedNotification
+                    .bookingId
+                    .passengerPhone
+                }
+              </span>
 
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                  Booking Reference
-                </p>
+            </div>
 
-                <p className="mt-1 text-lg font-black text-teal-700">
+            {/* EMAIL */}
+
+            {selectedNotification
+              .bookingId
+              .passengerEmail && (
+              <div className="flex items-center justify-between gap-3">
+
+                <span className="shrink-0 text-xs text-gray-400 sm:text-sm">
+                  Email
+                </span>
+
+                <span className="min-w-0 truncate text-right text-xs font-bold text-gray-900 sm:text-sm">
                   {
                     selectedNotification
                       .bookingId
-                      .bookingRef
+                      .passengerEmail
+                  }
+                </span>
+
+              </div>
+            )}
+
+          </div>
+
+        </div>
+
+        {/* =============================================
+            TRIP DETAILS
+        ============================================== */}
+
+        <div
+          className="
+            rounded-xl
+            border
+            border-gray-100
+            p-3
+            sm:rounded-2xl
+            sm:p-4
+          "
+        >
+          <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-gray-400 sm:text-xs">
+            Trip Details
+          </p>
+
+          <div className="space-y-3">
+
+            {/* ROUTE */}
+
+            <div className="flex items-start gap-2.5 sm:gap-3">
+
+              <MapPin
+                size={16}
+                className="mt-0.5 shrink-0 text-teal-700 sm:h-[17px] sm:w-[17px]"
+              />
+
+              <div className="min-w-0">
+
+                <p className="text-[9px] text-gray-400 sm:text-[10px]">
+                  Route
+                </p>
+
+                <p className="break-words text-xs font-bold text-gray-900 sm:text-sm">
+                  {
+                    selectedNotification
+                      .bookingId
+                      .route
                   }
                 </p>
 
               </div>
 
-              {/* PASSENGER */}
+            </div>
 
-              <div className="rounded-2xl border border-gray-100 p-4">
+            {/* BUS */}
 
-                <p className="mb-3 text-xs font-black uppercase tracking-wider text-gray-400">
-                  Passenger
+            <div className="flex items-start gap-2.5 sm:gap-3">
+
+              <Bus
+                size={16}
+                className="mt-0.5 shrink-0 text-teal-700 sm:h-[17px] sm:w-[17px]"
+              />
+
+              <div className="min-w-0">
+
+                <p className="text-[9px] text-gray-400 sm:text-[10px]">
+                  Bus
                 </p>
 
-                <div className="space-y-2">
+                <p className="text-xs font-bold text-gray-900 sm:text-sm">
+                  {
+                    selectedNotification
+                      .bookingId
+                      .bus
+                      ?.busNumber ||
+                    "—"
+                  }
+                </p>
 
-                  <div className="flex justify-between gap-4">
+              </div>
 
-                    <span className="text-sm text-gray-400">
-                      Name
-                    </span>
+            </div>
 
-                    <span className="text-sm font-bold text-gray-900">
-                      {
-                        selectedNotification
-                          .bookingId
-                          .passengerName
-                      }
-                    </span>
+            {/* DEPARTURE */}
 
-                  </div>
+            <div className="flex items-start gap-2.5 sm:gap-3">
 
-                  <div className="flex justify-between gap-4">
+              <Clock3
+                size={16}
+                className="mt-0.5 shrink-0 text-teal-700 sm:h-[17px] sm:w-[17px]"
+              />
 
-                    <span className="text-sm text-gray-400">
-                      Phone
-                    </span>
+              <div className="min-w-0">
 
-                    <span className="text-sm font-bold text-gray-900">
-                      {
-                        selectedNotification
-                          .bookingId
-                          .passengerPhone
-                      }
-                    </span>
+                <p className="text-[9px] text-gray-400 sm:text-[10px]">
+                  Departure
+                </p>
 
-                  </div>
+                <p className="text-xs font-bold text-gray-900 sm:text-sm">
 
                   {selectedNotification
                     .bookingId
-                    .passengerEmail && (
-                    <div className="flex justify-between gap-4">
-
-                      <span className="text-sm text-gray-400">
-                        Email
-                      </span>
-
-                      <span className="max-w-[250px] truncate text-sm font-bold text-gray-900">
-                        {
-                          selectedNotification
-                            .bookingId
-                            .passengerEmail
-                        }
-                      </span>
-
-                    </div>
-                  )}
-
-                </div>
-
-              </div>
-
-              {/* TRIP DETAILS */}
-
-              <div className="rounded-2xl border border-gray-100 p-4">
-
-                <p className="mb-3 text-xs font-black uppercase tracking-wider text-gray-400">
-                  Trip Details
-                </p>
-
-                <div className="space-y-3">
-
-                  {/* ROUTE */}
-
-                  <div className="flex items-center gap-3">
-
-                    <MapPin
-                      size={17}
-                      className="text-teal-700"
-                    />
-
-                    <div>
-
-                      <p className="text-[10px] text-gray-400">
-                        Route
-                      </p>
-
-                      <p className="text-sm font-bold text-gray-900">
-                        {
-                          selectedNotification
-                            .bookingId
-                            .route
-                        }
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  {/* BUS */}
-
-                  <div className="flex items-center gap-3">
-
-                    <Bus
-                      size={17}
-                      className="text-teal-700"
-                    />
-
-                    <div>
-
-                      <p className="text-[10px] text-gray-400">
-                        Bus
-                      </p>
-
-                      <p className="text-sm font-bold text-gray-900">
-                        {
-                          selectedNotification
-                            .bookingId
-                            .bus
-                            ?.busNumber ||
-                          "—"
-                        }
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  {/* DEPARTURE */}
-
-                  <div className="flex items-center gap-3">
-
-                    <Clock3
-                      size={17}
-                      className="text-teal-700"
-                    />
-
-                    <div>
-
-                      <p className="text-[10px] text-gray-400">
-                        Departure
-                      </p>
-
-                      <p className="text-sm font-bold text-gray-900">
-
-                        {selectedNotification
+                    .travelDate
+                    ? new Date(
+                        selectedNotification
                           .bookingId
                           .travelDate
-                          ? new Date(
-                              selectedNotification
-                                .bookingId
-                                .travelDate
-                            ).toLocaleDateString()
-                          : "—"}
+                      ).toLocaleDateString()
+                    : "—"}
 
-                        {" · "}
+                  {" · "}
 
-                        {
-                          selectedNotification
-                            .bookingId
-                            .travelTime ||
-                          "—"
-                        }
+                  {
+                    selectedNotification
+                      .bookingId
+                      .travelTime ||
+                    "—"
+                  }
 
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              {/* SELECTED SEATS */}
-
-              <div className="rounded-2xl bg-teal-50 p-4">
-
-                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-600">
-                  Selected Seats
                 </p>
-
-                <div className="mt-2 flex flex-wrap gap-2">
-
-                  {(
-                    selectedNotification
-                      .bookingId
-                      .seats || []
-                  ).map((seat) => (
-                    <span
-                      key={seat}
-                      className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-black text-white"
-                    >
-                      Seat {seat}
-                    </span>
-                  ))}
-
-                </div>
-
-              </div>
-
-              {/* ACTION BUTTONS */}
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-
-                {/* REJECT */}
-
-                <button
-                  type="button"
-                  disabled={
-                    actioningId ===
-                    selectedNotification
-                      .bookingId
-                      ._id
-                  }
-                  onClick={() =>
-                    handleBookingAction(
-                      selectedNotification
-                        .bookingId!
-                        ._id,
-                      "reject"
-                    )
-                  }
-                  className="flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
-                >
-
-                  {actioningId ===
-                  selectedNotification
-                    .bookingId
-                    ._id ? (
-                    <Loader2
-                      size={17}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <X size={17} />
-                  )}
-
-                  Reject Booking
-
-                </button>
-
-                {/* APPROVE */}
-
-                <button
-                  type="button"
-                  disabled={
-                    actioningId ===
-                    selectedNotification
-                      .bookingId
-                      ._id
-                  }
-                  onClick={() =>
-                    handleBookingAction(
-                      selectedNotification
-                        .bookingId!
-                        ._id,
-                      "approve"
-                    )
-                  }
-                  className="flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-teal-800 disabled:opacity-50"
-                >
-
-                  {actioningId ===
-                  selectedNotification
-                    .bookingId
-                    ._id ? (
-                    <Loader2
-                      size={17}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <Check size={17} />
-                  )}
-
-                  Approve Booking
-
-                </button>
 
               </div>
 
@@ -2141,7 +2159,198 @@ function handleNotificationClick(notification: AdminNotification) {
           </div>
 
         </div>
-      )}
+
+        {/* =============================================
+            SELECTED SEATS
+        ============================================== */}
+
+        <div
+          className="
+            rounded-xl
+            bg-teal-50
+            p-3
+            sm:rounded-2xl
+            sm:p-4
+          "
+        >
+          <p className="text-[9px] font-bold uppercase tracking-wider text-teal-600 sm:text-[10px]">
+            Selected Seats
+          </p>
+
+          <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
+
+            {(
+              selectedNotification
+                .bookingId
+                .seats || []
+            ).map((seat) => (
+              <span
+                key={seat}
+                className="
+                  rounded-lg
+                  bg-teal-700
+                  px-2.5
+                  py-1
+                  text-[10px]
+                  font-black
+                  text-white
+                  sm:px-3
+                  sm:py-1.5
+                  sm:text-xs
+                "
+              >
+                Seat {seat}
+              </span>
+            ))}
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          FIXED ACTION BUTTONS
+      ================================================== */}
+
+      <div
+        className="
+          shrink-0
+          border-t
+          border-gray-100
+          bg-white
+          p-3
+          sm:p-4
+        "
+      >
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+
+          {/* REJECT */}
+
+          <button
+            type="button"
+            disabled={
+              actioningId ===
+              selectedNotification
+                .bookingId
+                ._id
+            }
+            onClick={() =>
+              handleBookingAction(
+                selectedNotification
+                  .bookingId!
+                  ._id,
+                "reject"
+              )
+            }
+            className="
+              flex
+              min-h-10
+              items-center
+              justify-center
+              gap-1.5
+              rounded-xl
+              border
+              border-red-200
+              bg-red-50
+              px-2
+              py-2.5
+              text-xs
+              font-bold
+              text-red-600
+              transition
+              hover:bg-red-100
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+              sm:min-h-11
+              sm:gap-2
+              sm:px-4
+              sm:py-3
+              sm:text-sm
+            "
+          >
+
+            {actioningId ===
+            selectedNotification
+              .bookingId
+              ._id ? (
+              <Loader2
+                size={15}
+                className="animate-spin"
+              />
+            ) : (
+              <X size={15} />
+            )}
+
+            Reject
+
+          </button>
+
+          {/* APPROVE */}
+
+          <button
+            type="button"
+            disabled={
+              actioningId ===
+              selectedNotification
+                .bookingId
+                ._id
+            }
+            onClick={() =>
+              handleBookingAction(
+                selectedNotification
+                  .bookingId!
+                  ._id,
+                "approve"
+              )
+            }
+            className="
+              flex
+              min-h-10
+              items-center
+              justify-center
+              gap-1.5
+              rounded-xl
+              bg-teal-700
+              px-2
+              py-2.5
+              text-xs
+              font-bold
+              text-white
+              transition
+              hover:bg-teal-800
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+              sm:min-h-11
+              sm:gap-2
+              sm:px-4
+              sm:py-3
+              sm:text-sm
+            "
+          >
+
+            {actioningId ===
+            selectedNotification
+              .bookingId
+              ._id ? (
+              <Loader2
+                size={15}
+                className="animate-spin"
+              />
+            ) : (
+              <Check size={15} />
+            )}
+
+            Approve
+
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+)}
 
       {/* =====================================================
           LOGOUT CONFIRMATION MODAL
