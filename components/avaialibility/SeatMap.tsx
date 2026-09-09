@@ -1,25 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Armchair,
-  Clock3,
-} from "lucide-react";
+import { Armchair, Clock3 } from "lucide-react";
 
-import {
-  FaFemale,
-  FaMale,
-} from "react-icons/fa";
+import { FaFemale, FaMale } from "react-icons/fa";
 
 import type { Seat } from "@/libs/availability";
 
 type Props = {
   seats: Seat[];
+  maxSeats?: number;
   onSeatChange?: (seats: string[]) => void;
 };
 
 export default function SeatMap({
   seats,
+  maxSeats,
   onSeatChange,
 }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
@@ -37,7 +33,7 @@ export default function SeatMap({
   // ============================================================
 
   const handleSeatClick = (seat: Seat) => {
-    // Booked and pending seats cannot be selected
+    // Cannot select booked or pending seats
     if (
       seat.status === "booked" ||
       seat.status === "pending"
@@ -48,14 +44,73 @@ export default function SeatMap({
     setSelected((previous) => {
       const exists = previous.includes(seat.seatNumber);
 
+      // ========================================================
+      // UNSELECT SEAT
+      // ========================================================
+
       if (exists) {
         return previous.filter(
           (item) => item !== seat.seatNumber
         );
       }
 
+      // ========================================================
+      // MAX SEAT LIMIT
+      // Only applies when maxSeats is provided
+      // ========================================================
+
+      if (
+        typeof maxSeats === "number" &&
+        maxSeats > 0 &&
+        previous.length >= maxSeats
+      ) {
+        return previous;
+      }
+
+      // ========================================================
+      // SELECT SEAT
+      // ========================================================
+
       return [...previous, seat.seatNumber];
     });
+  };
+
+  // ============================================================
+  // SEAT POSITION
+  //
+  // RIGHT SIDE FIRST:
+  //
+  // 1  2 | 3  4
+  // 5  6 | 7  8
+  // 9 10 |11 12
+  //
+  // Grid:
+  // col 1 + 2 = RIGHT
+  // col 3      = AISLE
+  // col 4 + 5 = LEFT
+  // ============================================================
+
+  const getSeatPosition = (index: number) => {
+    const position = index % 4;
+
+    switch (position) {
+      // RIGHT SIDE
+      case 0:
+        return "col-start-1";
+
+      case 1:
+        return "col-start-2";
+
+      // LEFT SIDE
+      case 2:
+        return "col-start-4";
+
+      case 3:
+        return "col-start-5";
+
+      default:
+        return "";
+    }
   };
 
   // ============================================================
@@ -81,52 +136,58 @@ export default function SeatMap({
         </div>
 
         <div className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm">
-          {selected.length} selected
+          {selected.length}
+          {typeof maxSeats === "number"
+            ? ` / ${maxSeats}`
+            : ""}{" "}
+          selected
         </div>
       </div>
 
       {/* ======================================================
           BUS FRONT
       ====================================================== */}
-{/* ======================================================
-    BUS FRONT
-====================================================== */}
 
-<div className="mx-auto mb-5 grid max-w-[420px] grid-cols-[1fr_auto_1fr] items-center gap-3">
-  {/* LEFT FRONT */}
-  <div className="flex items-center justify-end">
-    <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-center shadow-sm">
-      <span className="block text-[8px] font-bold tracking-[0.12em] text-gray-400 sm:text-[9px]">
-        LEFT FRONT
-      </span>
-    </div>
-  </div>
+      <div className="mx-auto mb-5 grid max-w-[360px] grid-cols-5 items-center gap-2 sm:gap-3">
 
-  {/* FRONT */}
-  <div className="rounded-t-[50%] border-b-2 border-gray-300 bg-white px-8 py-3 text-center">
-    <span className="text-[10px] font-bold tracking-[0.25em] text-gray-400">
-      FRONT
-    </span>
-  </div>
+        {/* RIGHT FRONT */}
 
-  {/* RIGHT FRONT */}
-  <div className="flex items-center justify-start">
-    <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-center shadow-sm">
-      <span className="block text-[8px] font-bold tracking-[0.12em] text-gray-400 sm:text-[9px]">
-        RIGHT FRONT
-      </span>
-    </div>
-  </div>
-</div>
+        <div className="col-span-2 col-start-1 flex justify-start">
+          <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-center shadow-sm">
+            <span className="block text-[8px] font-bold tracking-[0.12em] text-gray-400 sm:text-[9px]">
+              RIGHT FRONT
+            </span>
+          </div>
+        </div>
+
+        {/* FRONT */}
+
+        <div className="col-start-3 flex justify-center">
+          <div className="rounded-t-[50%] border-b-2 border-gray-300 bg-white px-4 py-3 text-center sm:px-6">
+            <span className="text-[9px] font-bold tracking-[0.2em] text-gray-400 sm:text-[10px]">
+              FRONT
+            </span>
+          </div>
+        </div>
+
+        {/* LEFT FRONT */}
+
+        <div className="col-span-2 col-start-4 flex justify-end">
+          <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-center shadow-sm">
+            <span className="block text-[8px] font-bold tracking-[0.12em] text-gray-400 sm:text-[9px]">
+              LEFT FRONT
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* ======================================================
           SEATS
       ====================================================== */}
 
-      <div className="mx-auto grid max-w-[320px] grid-cols-5 gap-2 sm:gap-3">
-        {seats.map((seat, index) => {
-          const isAisle = index % 4 === 2;
+      <div className="mx-auto grid max-w-[360px] grid-cols-5 gap-2 sm:gap-3">
 
+        {seats.map((seat, index) => {
           const isSelected = selected.includes(
             seat.seatNumber
           );
@@ -146,14 +207,13 @@ export default function SeatMap({
           const isOccupied =
             isBooked || isPending;
 
+          const seatPosition =
+            getSeatPosition(index);
+
           return (
             <div
               key={seat.seatNumber}
-              className={
-                isAisle
-                  ? "col-start-4"
-                  : ""
-              }
+              className={seatPosition}
             >
               <button
                 type="button"
@@ -238,7 +298,7 @@ export default function SeatMap({
               >
 
                 {/* ==================================================
-                    GENDER / SEAT ICON
+                    SEAT ICON
                 ================================================== */}
 
                 {isFemale ? (
@@ -404,6 +464,21 @@ export default function SeatMap({
           seats are occupied by male passengers.
         </p>
       </div>
+
+      {/* ======================================================
+          MAX SEAT INFO
+      ====================================================== */}
+
+      {typeof maxSeats === "number" && maxSeats > 0 && (
+        <div className="mt-3 rounded-xl border border-teal-100 bg-teal-50 px-4 py-3 text-center">
+          <p className="text-[11px] font-medium text-teal-700">
+            Select exactly {maxSeats} seat
+            {maxSeats !== 1 ? "s" : ""} for{" "}
+            {maxSeats} passenger
+            {maxSeats !== 1 ? "s" : ""}.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -72,6 +72,13 @@ const BookingSchema = new Schema(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
+    // Optional discount percentage
+discount: {
+  type: Number,
+  min: 0,
+  max: 100,
+  default: 0,
+},
 
     emailScheduledAt: {
       type: Date,

@@ -17,6 +17,10 @@ export async function POST(req: NextRequest) {
       passenger,
       busId,
       seats,
+
+      // Optional percentage discount
+      // Example: 10 = 10%
+      discount,
     } = body;
 
     console.log("BOOKING REQUEST:", body);
@@ -47,7 +51,9 @@ export async function POST(req: NextRequest) {
     const gender = String(passenger.gender)
       .trim()
       .toLowerCase();
-console.log('gender',gender)
+
+    console.log("gender", gender);
+
     if (!["male", "female"].includes(gender)) {
       return NextResponse.json(
         {
@@ -83,7 +89,10 @@ console.log('gender',gender)
       );
     }
 
-    // Remove duplicate seats and normalize them
+    // ============================================
+    // NORMALIZE SEATS
+    // ============================================
+
     const selectedSeats = [
       ...new Set(
         seats.map((seat) =>
@@ -92,7 +101,10 @@ console.log('gender',gender)
       ),
     ];
 
-    // Make sure no empty seat values exist
+    // ============================================
+    // VALIDATE EMPTY SEATS
+    // ============================================
+
     if (
       selectedSeats.length === 0 ||
       selectedSeats.some((seat) => !seat)
@@ -104,6 +116,65 @@ console.log('gender',gender)
         { status: 400 }
       );
     }
+
+    // ============================================
+    // VALIDATE DISCOUNT
+    // ============================================
+    //
+    // Discount is OPTIONAL.
+    //
+    // Examples:
+    // undefined -> 0%
+    // 0         -> 0%
+    // 10        -> 10%
+    // 20        -> 20%
+    // 100       -> 100%
+    //
+    // ============================================
+
+    let discountPercentage = 0;
+
+    if (
+      discount !== undefined &&
+      discount !== null &&
+      discount !== ""
+    ) {
+      const parsedDiscount = Number(discount);
+
+      if (!Number.isFinite(parsedDiscount)) {
+        return NextResponse.json(
+          {
+            error:
+              "Discount must be a valid percentage",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        parsedDiscount < 0 ||
+        parsedDiscount > 100
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Discount percentage must be between 0 and 100",
+          },
+          { status: 400 }
+        );
+      }
+
+      discountPercentage = parsedDiscount;
+    }
+
+    console.log(
+      "DISCOUNT PERCENTAGE:",
+      discountPercentage
+    );
+
+    // ============================================
+    // CREATED BOOKING
+    // ============================================
 
     let createdBooking: any = null;
 
@@ -155,9 +226,7 @@ console.log('gender',gender)
           !seat ||
           seat.status !== "available"
         ) {
-          unavailableSeats.push(
-            seatNumber
-          );
+          unavailableSeats.push(seatNumber);
         }
       }
 
@@ -175,6 +244,66 @@ console.log('gender',gender)
 
         throw error;
       }
+
+      // --------------------------------------------
+      // CALCULATE PRICE
+      // --------------------------------------------
+
+      const pricePerSeat = Number(bus.price);
+
+      if (
+        !Number.isFinite(pricePerSeat) ||
+        pricePerSeat < 0
+      ) {
+        throw new Error("INVALID_BUS_PRICE");
+      }
+
+      // Example:
+      //
+      // pricePerSeat = 1000
+      // seats = 2
+      //
+      // subtotal = 2000
+      //
+      const subtotal =
+        pricePerSeat * selectedSeats.length;
+
+      // --------------------------------------------
+      // DISCOUNT CALCULATION
+      // --------------------------------------------
+      //
+      // Example:
+      //
+      // subtotal = 1000
+      // discountPercentage = 10
+      //
+      // discountAmount =
+      // 1000 * (10 / 100)
+      //
+      // discountAmount = 100
+      //
+      // totalFare =
+      // 1000 - 100
+      //
+      // totalFare = 900
+      //
+      // --------------------------------------------
+
+      const discountAmount =
+        subtotal *
+        (discountPercentage / 100);
+
+      const totalFare =
+        subtotal - discountAmount;
+
+      console.log("PRICE CALCULATION:", {
+        pricePerSeat,
+        selectedSeats: selectedSeats.length,
+        subtotal,
+        discountPercentage,
+        discountAmount,
+        totalFare,
+      });
 
       // --------------------------------------------
       // MARK SEATS AS PENDING
@@ -239,7 +368,6 @@ console.log('gender',gender)
               passengerPhone:
                 passenger.phone.trim(),
 
-              // NEW
               gender,
 
               route:
@@ -260,6 +388,25 @@ console.log('gender',gender)
               emailSent: false,
 
               whatsappSent: false,
+
+              // ==================================
+              // PRICE INFORMATION
+              // ==================================
+
+              pricePerSeat,
+
+              subtotal,
+
+              // Discount percentage
+              // Example: 10 means 10%
+              discount:
+                discountPercentage,
+
+              // Actual money discounted
+              discountAmount,
+
+              // Final amount customer needs to pay
+              totalFare,
             },
           ],
           { session }
@@ -340,7 +487,6 @@ console.log('gender',gender)
           passengerPhone:
             createdBooking.passengerPhone,
 
-          // NEW
           gender:
             createdBooking.gender,
 
@@ -352,6 +498,25 @@ console.log('gender',gender)
 
           travelTime:
             createdBooking.travelTime,
+
+          // ======================================
+          // PRICE RESPONSE
+          // ======================================
+
+          pricePerSeat:
+            createdBooking.pricePerSeat,
+
+          subtotal:
+            createdBooking.subtotal,
+
+          discount:
+            createdBooking.discount,
+
+          discountAmount:
+            createdBooking.discountAmount,
+
+          totalFare:
+            createdBooking.totalFare,
         },
       },
       { status: 201 }
@@ -411,6 +576,23 @@ console.log('gender',gender)
         {
           error:
             "Invalid bus travel date",
+        },
+        { status: 400 }
+      );
+    }
+
+    // ============================================
+    // INVALID BUS PRICE
+    // ============================================
+
+    if (
+      error.message ===
+      "INVALID_BUS_PRICE"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid bus price",
         },
         { status: 400 }
       );
