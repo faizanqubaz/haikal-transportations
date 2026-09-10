@@ -9,41 +9,30 @@ if (!JWT_SECRET) {
 
 const secret = new TextEncoder().encode(JWT_SECRET);
 
+// NOTE: this exported name is required by Next.js — it must be exactly
+// `middleware` (or a default export) or the file is not picked up at all.
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  console.log("=================================");
-  console.log("🔥 PROXY RUNNING");
-  console.log("PATH:", pathname);
-
-  // Allow login page
+  // Allow the login page itself.
   if (pathname === "/admin/login") {
-    console.log("➡️ Login page - allowed");
     return NextResponse.next();
   }
 
-  // Protect every other /admin page
+  // Protect every other /admin page.
   if (pathname.startsWith("/admin")) {
     const token = request.cookies.get("admin_token")?.value;
 
-    console.log("TOKEN:", token ? "FOUND" : "NOT FOUND");
-
     if (!token) {
-      console.log("❌ NO TOKEN - REDIRECTING");
-
-      return NextResponse.redirect(
-        new URL("/admin/login", request.url)
-      );
+      return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
     try {
       const { payload } = await jwtVerify(token, secret);
 
-      console.log("JWT:", payload);
-
-      if (payload.role !== "admin") {
-        console.log("❌ NOT ADMIN");
-
+      // Both admin and superadmin may reach /admin pages.
+      // Page-level / API-level checks handle superadmin-only actions.
+      if (payload.role !== "admin" && payload.role !== "superadmin") {
         const response = NextResponse.redirect(
           new URL("/admin/login", request.url)
         );
@@ -53,11 +42,9 @@ export async function proxy(request: NextRequest) {
         return response;
       }
 
-      console.log("✅ ADMIN AUTHORIZED");
-
       return NextResponse.next();
     } catch (error) {
-      console.error("❌ INVALID TOKEN:", error);
+      console.error("Invalid admin token:", error);
 
       const response = NextResponse.redirect(
         new URL("/admin/login", request.url)

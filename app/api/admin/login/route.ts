@@ -35,15 +35,20 @@ export async function POST(request: Request) {
 
     const admin = await Admin.findOne({ username }).lean();
     console.log('admin', admin)
-    if (!admin || admin.role !== "admin") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid username or password.",
-        },
-        { status: 401 }
-      );
+ if (
+  !admin ||
+  !["admin", "superadmin"].includes(admin.role)
+) {
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Invalid username or password.",
+    },
+    {
+      status: 401,
     }
+  );
+}
 
     const passwordMatches = await bcrypt.compare(
       password,

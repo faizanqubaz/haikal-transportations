@@ -21,8 +21,8 @@ async function createAdmin() {
     console.log("✅ MongoDB connected");
     console.log("📦 Database:", mongoose.connection.name);
 
-    const username = "admin@carenest.com";
-    const password = "Admin123!";
+    const username = "faizan";
+    const password = "admin123";
 
     // Check whether admin already exists
     const existingAdmin = await Admin.findOne({
@@ -42,7 +42,7 @@ async function createAdmin() {
     const admin = await Admin.create({
       username: username.toLowerCase(),
       passwordHash,
-      role: "admin",
+      role: "superadmin",
     });
 
     console.log("=================================");

@@ -3,7 +3,7 @@ import mongoose, { Schema, Model, Document } from "mongoose";
 export interface IAdmin extends Document {
   username: string;
   passwordHash: string;
-  role: "admin";
+  role: "admin" | "superadmin";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,7 +25,7 @@ const AdminSchema = new Schema<IAdmin>(
 
     role: {
       type: String,
-      enum: ["admin"],
+      enum: ["admin", "superadmin"],
       default: "admin",
     },
   },
