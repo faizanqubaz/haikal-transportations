@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
 
 export const runtime = "nodejs";
 
@@ -8,11 +7,12 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const TTS_MODEL = "gemini-3.1-flash-tts-preview";
 const VOICE_NAME = "Kore";
 
-const ai = GEMINI_API_KEY
-  ? new GoogleGenAI({
-      apiKey: GEMINI_API_KEY,
-    })
-  : null;
+const GEMINI_TTS_URL =
+  `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent`;
+
+// ============================================================
+// PCM -> WAV
+// ============================================================
 
 function pcmToWav(
   pcmBase64: string,
@@ -22,120 +22,170 @@ function pcmToWav(
 ): Buffer {
   const pcm = Buffer.from(pcmBase64, "base64");
 
+  const bytesPerSample = bitsPerSample / 8;
+
   const byteRate =
     sampleRate *
     channels *
-    (bitsPerSample / 8);
+    bytesPerSample;
 
   const blockAlign =
     channels *
-    (bitsPerSample / 8);
+    bytesPerSample;
 
-  const buffer = Buffer.alloc(
+  const wav = Buffer.alloc(
     44 + pcm.length
   );
 
-  buffer.write("RIFF", 0);
+  // RIFF
+  wav.write("RIFF", 0);
 
-  buffer.writeUInt32LE(
+  wav.writeUInt32LE(
     36 + pcm.length,
     4
   );
 
-  buffer.write("WAVE", 8);
+  wav.write("WAVE", 8);
 
-  buffer.write("fmt ", 12);
+  // fmt
+  wav.write("fmt ", 12);
 
-  buffer.writeUInt32LE(
+  wav.writeUInt32LE(
     16,
     16
   );
 
-  // PCM
-  buffer.writeUInt16LE(
+  // Audio format = PCM
+  wav.writeUInt16LE(
     1,
     20
   );
 
-  buffer.writeUInt16LE(
+  // Channels
+  wav.writeUInt16LE(
     channels,
     22
   );
 
-  buffer.writeUInt32LE(
+  // Sample rate
+  wav.writeUInt32LE(
     sampleRate,
     24
   );
 
-  buffer.writeUInt32LE(
+  // Byte rate
+  wav.writeUInt32LE(
     byteRate,
     28
   );
 
-  buffer.writeUInt16LE(
+  // Block align
+  wav.writeUInt16LE(
     blockAlign,
     32
   );
 
-  buffer.writeUInt16LE(
+  // Bits per sample
+  wav.writeUInt16LE(
     bitsPerSample,
     34
   );
 
-  buffer.write("data", 36);
+  // data
+  wav.write("data", 36);
 
-  buffer.writeUInt32LE(
+  wav.writeUInt32LE(
     pcm.length,
     40
   );
 
   pcm.copy(
-    buffer,
+    wav,
     44
   );
 
-  return buffer;
+  return wav;
 }
+
+// ============================================================
+// GENERATE GEMINI TTS
+// ============================================================
 
 async function generateSpeech(
   urduText: string
 ): Promise<Buffer> {
-  if (!ai) {
+  if (!GEMINI_API_KEY) {
     throw new Error(
       "GEMINI_API_KEY is missing."
     );
   }
-
-  const start = Date.now();
 
   console.log(
     "========== GEMINI TTS =========="
   );
 
   console.log(
-    "Urdu text:",
+    "Model:",
+    TTS_MODEL
+  );
+
+  console.log(
+    "Voice:",
+    VOICE_NAME
+  );
+
+  console.log(
+    "Input:",
     urduText
   );
 
-  const response =
-    await ai.models.generateContent({
-      model: TTS_MODEL,
+  console.log(
+    "API key exists:",
+    Boolean(GEMINI_API_KEY)
+  );
 
-      contents: [
-        {
-          role: "user",
+  console.log(
+    "API key length:",
+    GEMINI_API_KEY.length
+  );
 
-          parts: [
-            {
-              text: `
+  const start = Date.now();
+
+  // ==========================================================
+  // IMPORTANT:
+  // Use x-goog-api-key directly.
+  // Do NOT send Authorization: Bearer.
+  // ==========================================================
+
+  const response = await fetch(
+    GEMINI_TTS_URL,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        "x-goog-api-key":
+          GEMINI_API_KEY,
+      },
+
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+
+            parts: [
+              {
+                text: `
 You are a warm, friendly Pakistani female travel assistant.
 
-Speak the following text in natural Pakistani Urdu.
+Speak the following text naturally in Pakistani Urdu.
 
 IMPORTANT:
 
 - Speak in Pakistani Urdu.
-- Do not translate.
+- Do not translate the text.
 - Do not change the meaning.
 - Do not add information.
 - Do not remove information.
@@ -159,43 +209,96 @@ TEXT:
 
 ${urduText}
 `,
-            },
-          ],
-        },
-      ],
-
-      config: {
-        responseModalities: [
-          "AUDIO",
+              },
+            ],
+          },
         ],
 
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName:
-                VOICE_NAME,
+        generationConfig: {
+          responseModalities: [
+            "AUDIO",
+          ],
+
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName:
+                  VOICE_NAME,
+              },
             },
           },
         },
-      },
-    });
+      }),
+    }
+  );
+
+  // ==========================================================
+  // READ RESPONSE
+  // ==========================================================
+
+  const rawResponse =
+    await response.text();
+
+  console.log(
+    "Gemini HTTP status:",
+    response.status
+  );
+
+  if (!response.ok) {
+    console.error(
+      "Gemini HTTP error:",
+      rawResponse
+    );
+
+    throw new Error(
+      `Gemini TTS failed (${response.status}): ${rawResponse}`
+    );
+  }
+
+  let data: any;
+
+  try {
+    data =
+      JSON.parse(rawResponse);
+  } catch {
+    console.error(
+      "Invalid Gemini JSON response:",
+      rawResponse
+    );
+
+    throw new Error(
+      "Gemini returned an invalid JSON response."
+    );
+  }
+
+  console.log(
+    "Gemini response received."
+  );
+
+  // ==========================================================
+  // FIND AUDIO
+  // ==========================================================
 
   const parts =
-    response.candidates?.[0]
+    data?.candidates?.[0]
       ?.content?.parts || [];
 
-  const audioPart = parts.find(
-    (part: any) =>
-      part.inlineData?.data
-  );
+  const audioPart =
+    parts.find(
+      (part: any) =>
+        part?.inlineData?.data
+    );
 
   if (
     !audioPart?.inlineData?.data
   ) {
     console.error(
-      "Gemini response:",
+      "No audio returned by Gemini:"
+    );
+
+    console.error(
       JSON.stringify(
-        response,
+        data,
         null,
         2
       )
@@ -206,9 +309,33 @@ ${urduText}
     );
   }
 
+  const mimeType =
+    audioPart.inlineData
+      ?.mimeType || "";
+
+  console.log(
+    "Gemini audio MIME:",
+    mimeType
+  );
+
+  const pcmBase64 =
+    audioPart.inlineData.data;
+
+  console.log(
+    "PCM base64 length:",
+    pcmBase64.length
+  );
+
+  // ==========================================================
+  // PCM -> WAV
+  // ==========================================================
+
   const wav =
     pcmToWav(
-      audioPart.inlineData.data
+      pcmBase64,
+      24000,
+      1,
+      16
     );
 
   console.log(
@@ -217,7 +344,7 @@ ${urduText}
   );
 
   console.log(
-    "Audio bytes:",
+    "WAV bytes:",
     wav.length
   );
 
@@ -228,11 +355,19 @@ ${urduText}
   return wav;
 }
 
+// ============================================================
+// POST
+// ============================================================
+
 export async function POST(
   request: NextRequest
 ) {
   try {
     if (!GEMINI_API_KEY) {
+      console.error(
+        "GEMINI_API_KEY is missing."
+      );
+
       return NextResponse.json(
         {
           error:
@@ -264,7 +399,19 @@ export async function POST(
       );
     }
 
-    // Generate Urdu audio directly.
+    // Prevent extremely large TTS requests.
+    if (text.length > 5000) {
+      return NextResponse.json(
+        {
+          error:
+            "Text is too long for TTS.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
     const audio =
       await generateSpeech(
         text
@@ -298,8 +445,19 @@ export async function POST(
     );
   } catch (error: any) {
     console.error(
-      "Gemini TTS error:",
+      "================================"
+    );
+
+    console.error(
+      "GEMINI TTS ERROR"
+    );
+
+    console.error(
       error
+    );
+
+    console.error(
+      "================================"
     );
 
     return NextResponse.json(
