@@ -19,9 +19,9 @@ export const BookingAssistantState = Annotation.Root({
   /**
    * Assistant language.
    */
-  language: Annotation<"en" | 'hi'>({
+  language: Annotation<"ur" | 'hi'>({
     reducer: (_, next) => next,
-    default: () => "en",
+    default: () => "ur",
   }),
 
   /**

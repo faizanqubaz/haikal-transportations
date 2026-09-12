@@ -20,6 +20,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { FaLongArrowAltRight } from "react-icons/fa";
 
 
 // ============================================================
@@ -213,7 +214,7 @@ export default function BookingAssistant() {
 
     // English (US)
     recognition.lang =
-      "en-US";
+      "ur-PK";
 
     recognition.onstart =
       () => {
@@ -362,8 +363,8 @@ export default function BookingAssistant() {
         // Prefer an exact en-US voice, then any English voice,
         // then fall back to whatever is first available.
         return (
-          voices.find((v) => v.lang === "en-US") ||
-          voices.find((v) => v.lang?.startsWith("en")) ||
+          voices.find((v) => v.lang === "ur-PK") ||
+          voices.find((v) => v.lang?.startsWith("ur")) ||
           voices[0] ||
           null
         );
@@ -408,86 +409,124 @@ export default function BookingAssistant() {
   // SPEAK ANSWER
   // ==========================================================
 
-  async function speakAnswer(
-    text: string
-  ) {
-    if (
-      typeof window ===
-        "undefined" ||
-      !(
-        "speechSynthesis" in
-        window
-      )
-    ) {
-      return;
-    }
+const audioRef = useRef<HTMLAudioElement | null>(null);
+const audioUrlRef = useRef<string | null>(null);
 
-    window.speechSynthesis.cancel();
+async function speakAnswer(text: string) {
+  if (!text?.trim()) return;
 
-    const utterance =
-      new SpeechSynthesisUtterance(
-        text
+  try {
+    stopSpeaking();
+    setSpeaking(true);
+
+    console.log("Sending text to Gemini TTS:", text);
+
+    const response = await fetch("/api/ai/tts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: text.trim(),
+      }),
+    });
+
+    // IMPORTANT:
+    // Read the real server error instead of hiding it.
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      console.error("Gemini TTS API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+      });
+
+      throw new Error(
+        `Gemini TTS failed (${response.status}): ${errorText}`
       );
-
-    // English (US)
-    utterance.lang =
-      "en-US";
-
-    utterance.rate =
-      0.9;
-
-    utterance.pitch =
-      1;
-
-    const voice = await getEnglishVoice();
-
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
     }
 
-    utterance.onstart =
-      () => {
-        setSpeaking(true);
-      };
+    const audioBlob = await response.blob();
 
-    utterance.onend =
-      () => {
-        setSpeaking(false);
-      };
+    console.log("Gemini audio received:", {
+      size: audioBlob.size,
+      type: audioBlob.type,
+    });
 
-    utterance.onerror =
-      (event) => {
-        console.error(
-          "Speech synthesis error:",
-          event
-        );
+    if (!audioBlob.size) {
+      throw new Error("Gemini returned empty audio.");
+    }
 
-        setSpeaking(false);
-      };
+    const audioUrl = URL.createObjectURL(audioBlob);
 
-    window.speechSynthesis.speak(
-      utterance
-    );
+    audioUrlRef.current = audioUrl;
+
+    const audio = new Audio(audioUrl);
+
+    audioRef.current = audio;
+
+    audio.onended = () => {
+      setSpeaking(false);
+
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
+
+      audioRef.current = null;
+    };
+
+    audio.onerror = (event) => {
+      console.error("Audio playback error:", event);
+
+      setSpeaking(false);
+
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
+
+      audioRef.current = null;
+    };
+
+    try {
+      await audio.play();
+    } catch (playError) {
+      console.error("Browser audio.play() failed:", playError);
+      setSpeaking(false);
+    }
+  } catch (error) {
+    console.error("Gemini Urdu TTS error:", error);
+    setSpeaking(false);
   }
+}
 
   // ==========================================================
   // STOP SPEAKING
   // ==========================================================
 
-  function stopSpeaking() {
-    if (
-      typeof window !==
-        "undefined" &&
-      "speechSynthesis" in
-        window
-    ) {
-      window.speechSynthesis.cancel();
+ function stopSpeaking() {
+  try {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
 
-    setSpeaking(false);
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  } catch (error) {
+    console.error(
+      "Could not stop Gemini audio:",
+      error
+    );
   }
 
+  setSpeaking(false);
+}
   // ==========================================================
   // ASK ASSISTANT
   // ==========================================================
@@ -583,7 +622,7 @@ export default function BookingAssistant() {
         errorMessage
       );
 
-      speakAnswer(
+    await  speakAnswer(
         errorMessage
       );
     } finally {
