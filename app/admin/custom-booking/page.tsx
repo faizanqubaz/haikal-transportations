@@ -140,6 +140,7 @@ export default function CustomBookingPage() {
     name: "",
     email: "",
     phone: "",
+    cnic: "",
     gender: "",
   });
 
@@ -163,7 +164,7 @@ export default function CustomBookingPage() {
 
   const subtotal = currentBus
     ? Number(currentBus.price || 0) *
-      selectedSeats.length
+    selectedSeats.length
     : 0;
 
   const discountPercentage = Math.min(
@@ -198,7 +199,7 @@ export default function CustomBookingPage() {
 
     const newPassengers =
       Number.isFinite(numericValue) &&
-      numericValue >= 1
+        numericValue >= 1
         ? Math.floor(numericValue)
         : 1;
 
@@ -293,7 +294,7 @@ export default function CustomBookingPage() {
       if (!res.ok) {
         throw new Error(
           data.error ||
-            "Unable to search for buses."
+          "Unable to search for buses."
         );
       }
 
@@ -336,18 +337,14 @@ export default function CustomBookingPage() {
       passengers
     ) {
       setSeatError(
-        `This bus only has ${
-          bus.availableSeats
-        } available seat${
-          bus.availableSeats !== 1
-            ? "s"
-            : ""
-        }, but you selected ${
-          passengers
-        } passenger${
-          passengers !== 1
-            ? "s"
-            : ""
+        `This bus only has ${bus.availableSeats
+        } available seat${bus.availableSeats !== 1
+          ? "s"
+          : ""
+        }, but you selected ${passengers
+        } passenger${passengers !== 1
+          ? "s"
+          : ""
         }.`
       );
 
@@ -398,7 +395,7 @@ export default function CustomBookingPage() {
       if (!res.ok) {
         throw new Error(
           data.error ||
-            "Unable to load latest seat availability."
+          "Unable to load latest seat availability."
         );
       }
 
@@ -454,18 +451,14 @@ export default function CustomBookingPage() {
       passengers
     ) {
       setSubmitError(
-        `Please select exactly ${
-          passengers
-        } seat${
-          passengers !== 1
-            ? "s"
-            : ""
-        } for ${
-          passengers
-        } passenger${
-          passengers !== 1
-            ? "s"
-            : ""
+        `Please select exactly ${passengers
+        } seat${passengers !== 1
+          ? "s"
+          : ""
+        } for ${passengers
+        } passenger${passengers !== 1
+          ? "s"
+          : ""
         }.`
       );
       return;
@@ -524,6 +517,7 @@ export default function CustomBookingPage() {
       !passenger.name.trim() ||
       !passenger.email.trim() ||
       !passenger.phone.trim() ||
+      !passenger.cnic.trim() ||
       !passenger.gender
     ) {
       setSubmitError(
@@ -545,18 +539,14 @@ export default function CustomBookingPage() {
       passengers
     ) {
       setSubmitError(
-        `Please select exactly ${
-          passengers
-        } seat${
-          passengers !== 1
-            ? "s"
-            : ""
-        } for ${
-          passengers
-        } passenger${
-          passengers !== 1
-            ? "s"
-            : ""
+        `Please select exactly ${passengers
+        } seat${passengers !== 1
+          ? "s"
+          : ""
+        } for ${passengers
+        } passenger${passengers !== 1
+          ? "s"
+          : ""
         }.`
       );
       return;
@@ -597,19 +587,11 @@ export default function CustomBookingPage() {
 
           body: JSON.stringify({
             passenger: {
-              name:
-                passenger.name.trim(),
-
-              email:
-                passenger.email
-                  .trim()
-                  .toLowerCase(),
-
-              phone:
-                passenger.phone.trim(),
-
-              gender:
-                passenger.gender,
+              name: passenger.name.trim(),
+              email: passenger.email.trim().toLowerCase(),
+              phone: passenger.phone.trim(),
+              cnic: passenger.cnic.trim(),
+              gender: passenger.gender,
             },
 
             busId: currentBus.id,
@@ -629,7 +611,7 @@ export default function CustomBookingPage() {
       if (!res.ok) {
         throw new Error(
           data.error ||
-            "Unable to create your booking request."
+          "Unable to create your booking request."
         );
       }
 
@@ -731,16 +713,16 @@ export default function CustomBookingPage() {
     const travelDate =
       currentBus.departure
         ? new Date(
-            `${currentBus.departure}T00:00:00`
-          ).toLocaleDateString(
-            "en-PK",
-            {
-              weekday: "short",
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            }
-          )
+          `${currentBus.departure}T00:00:00`
+        ).toLocaleDateString(
+          "en-PK",
+          {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }
+        )
         : date || "N/A";
 
     const formatCurrency = (
@@ -761,7 +743,8 @@ export default function CustomBookingPage() {
     const passengerPhone =
       passenger.phone.trim() ||
       "N/A";
-
+    const passengerCnic =
+      passenger.cnic.trim() || "N/A";
     const passengerEmail =
       passenger.email.trim() ||
       "N/A";
@@ -769,9 +752,9 @@ export default function CustomBookingPage() {
     const passengerGender =
       passenger.gender
         ? passenger.gender
-            .charAt(0)
-            .toUpperCase() +
-          passenger.gender.slice(1)
+          .charAt(0)
+          .toUpperCase() +
+        passenger.gender.slice(1)
         : "N/A";
 
     const busNumber =
@@ -834,7 +817,7 @@ export default function CustomBookingPage() {
       Math.max(
         0,
         calculatedSubtotal -
-          calculatedDiscountAmount
+        calculatedDiscountAmount
       );
 
     printWindow.document.write(`
@@ -1420,6 +1403,16 @@ export default function CustomBookingPage() {
                   </div>
 
                   <div class="item">
+  <div class="label">
+    CNIC
+  </div>
+
+  <div class="value">
+    ${passengerCnic}
+  </div>
+</div>
+
+                  <div class="item">
                     <div class="label">
                       Contact Number
                     </div>
@@ -1452,11 +1445,10 @@ export default function CustomBookingPage() {
                 <div class="seat-box">
 
                   <div class="seat-label">
-                    Selected Seat${
-                      seatCount !== 1
-                        ? "s"
-                        : ""
-                    }
+                    Selected Seat${seatCount !== 1
+        ? "s"
+        : ""
+      }
                   </div>
 
                   <div class="seat-value">
@@ -1483,8 +1475,8 @@ export default function CustomBookingPage() {
 
                     <span class="fare-value">
                       ${formatCurrency(
-                        pricePerSeat
-                      )}
+        pricePerSeat
+      )}
                     </span>
 
                   </div>
@@ -1509,16 +1501,15 @@ export default function CustomBookingPage() {
 
                     <span class="fare-value">
                       ${formatCurrency(
-                        calculatedSubtotal
-                      )}
+        calculatedSubtotal
+      )}
                     </span>
 
                   </div>
 
-                  ${
-                    calculatedDiscountPercentage >
-                    0
-                      ? `
+                  ${calculatedDiscountPercentage >
+        0
+        ? `
                         <div class="fare-row discount">
 
                           <span>
@@ -1527,14 +1518,14 @@ export default function CustomBookingPage() {
 
                           <span>
                             - ${formatCurrency(
-                              calculatedDiscountAmount
-                            )}
+          calculatedDiscountAmount
+        )}
                           </span>
 
                         </div>
                       `
-                      : ""
-                  }
+        : ""
+      }
 
                   <div class="total">
 
@@ -1544,8 +1535,8 @@ export default function CustomBookingPage() {
 
                     <span class="total-value">
                       ${formatCurrency(
-                        calculatedTotal
-                      )}
+        calculatedTotal
+      )}
                     </span>
 
                   </div>
@@ -1714,11 +1705,10 @@ export default function CustomBookingPage() {
                         e.target.value
                       )
                     }
-                    className={`h-12 w-full appearance-none rounded-xl border bg-white pl-10 pr-10 text-sm outline-none transition hover:border-slate-300 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 ${
-                      pickup
-                        ? "border-slate-200 text-slate-900"
-                        : "border-slate-200 text-slate-400"
-                    }`}
+                    className={`h-12 w-full appearance-none rounded-xl border bg-white pl-10 pr-10 text-sm outline-none transition hover:border-slate-300 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 ${pickup
+                      ? "border-slate-200 text-slate-900"
+                      : "border-slate-200 text-slate-400"
+                      }`}
                   >
 
                     <option value="">
@@ -1777,11 +1767,10 @@ export default function CustomBookingPage() {
                         e.target.value
                       )
                     }
-                    className={`h-12 w-full appearance-none rounded-xl border bg-white pl-10 pr-10 text-sm outline-none transition hover:border-slate-300 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 ${
-                      destination
-                        ? "border-slate-200 text-slate-900"
-                        : "border-slate-200 text-slate-400"
-                    }`}
+                    className={`h-12 w-full appearance-none rounded-xl border bg-white pl-10 pr-10 text-sm outline-none transition hover:border-slate-300 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 ${destination
+                      ? "border-slate-200 text-slate-900"
+                      : "border-slate-200 text-slate-400"
+                      }`}
                   >
 
                     <option value="">
@@ -2045,11 +2034,10 @@ export default function CustomBookingPage() {
                   return (
                     <article
                       key={bus.id}
-                      className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
-                        isSelected
-                          ? "border-teal-500 ring-2 ring-teal-100"
-                          : "border-slate-200 hover:border-slate-300 hover:shadow-md"
-                      }`}
+                      className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${isSelected
+                        ? "border-teal-500 ring-2 ring-teal-100"
+                        : "border-slate-200 hover:border-slate-300 hover:shadow-md"
+                        }`}
                     >
 
                       {isSelected && (
@@ -2091,11 +2079,10 @@ export default function CustomBookingPage() {
                           <div className="flex items-center justify-between gap-3 lg:justify-end">
 
                             <span
-                              className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                                hasEnoughSeats
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : "bg-red-50 text-red-700"
-                              }`}
+                              className={`rounded-full px-3 py-1.5 text-xs font-bold ${hasEnoughSeats
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-red-50 text-red-700"
+                                }`}
                             >
                               {
                                 bus.availableSeats
@@ -2212,13 +2199,12 @@ export default function CustomBookingPage() {
                               disabled={
                                 !hasEnoughSeats
                               }
-                              className={`h-11 rounded-xl px-5 text-sm font-bold transition sm:min-w-[140px] ${
-                                !hasEnoughSeats
-                                  ? "cursor-not-allowed bg-slate-100 text-slate-400"
-                                  : isSelected
-                                    ? "bg-teal-700 text-white"
-                                    : "border border-slate-200 bg-white text-slate-700 hover:border-teal-600 hover:text-teal-700"
-                              }`}
+                              className={`h-11 rounded-xl px-5 text-sm font-bold transition sm:min-w-[140px] ${!hasEnoughSeats
+                                ? "cursor-not-allowed bg-slate-100 text-slate-400"
+                                : isSelected
+                                  ? "bg-teal-700 text-white"
+                                  : "border border-slate-200 bg-white text-slate-700 hover:border-teal-600 hover:text-teal-700"
+                                }`}
                             >
 
                               {isSelected ? (
@@ -2319,7 +2305,7 @@ export default function CustomBookingPage() {
                                       </span>{" "}
                                       seat
                                       {passengers !==
-                                      1
+                                        1
                                         ? "s"
                                         : ""}{" "}
                                       for{" "}
@@ -2328,7 +2314,7 @@ export default function CustomBookingPage() {
                                       }{" "}
                                       passenger
                                       {passengers !==
-                                      1
+                                        1
                                         ? "s"
                                         : ""}.
                                     </p>
@@ -2388,11 +2374,10 @@ export default function CustomBookingPage() {
                                         passengers
                                       ) {
                                         setSubmitError(
-                                          `You can select a maximum of ${passengers} seat${
-                                            passengers !==
+                                          `You can select a maximum of ${passengers} seat${passengers !==
                                             1
-                                              ? "s"
-                                              : ""
+                                            ? "s"
+                                            : ""
                                           }.`
                                         );
 
@@ -2425,10 +2410,10 @@ export default function CustomBookingPage() {
 
                                   <p className="mt-1.5 break-words text-sm font-bold text-slate-900">
                                     {selectedSeats.length >
-                                    0
+                                      0
                                       ? selectedSeats.join(
-                                          ", "
-                                        )
+                                        ", "
+                                      )
                                       : "No seats selected"}
                                   </p>
 
@@ -2453,27 +2438,25 @@ export default function CustomBookingPage() {
 
                               {selectedSeats.length > 0 &&
                                 selectedSeats.length !==
-                                  passengers && (
+                                passengers && (
                                   <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-center">
                                     <p className="text-xs font-semibold text-amber-700">
                                       Please select{" "}
                                       {passengers -
                                         selectedSeats.length >
-                                      0
-                                        ? `${
-                                            passengers -
-                                            selectedSeats.length
-                                          } more`
-                                        : `${
-                                            selectedSeats.length -
-                                            passengers
-                                          } fewer`}{" "}
+                                        0
+                                        ? `${passengers -
+                                        selectedSeats.length
+                                        } more`
+                                        : `${selectedSeats.length -
+                                        passengers
+                                        } fewer`}{" "}
                                       seat
                                       {Math.abs(
                                         passengers -
-                                          selectedSeats.length
+                                        selectedSeats.length
                                       ) !==
-                                      1
+                                        1
                                         ? "s"
                                         : ""}{" "}
                                       to continue.
@@ -2666,6 +2649,60 @@ export default function CustomBookingPage() {
 
                     </div>
 
+
+                    {/* CNIC */}
+
+                    {/* CNIC */}
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-bold text-slate-700 sm:text-sm">
+                        CNIC
+                      </label>
+
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={passenger.cnic}
+                        onChange={(e) => {
+                          // Remove everything except numbers
+                          const digits = e.target.value.replace(/\D/g, "");
+
+                          // Pakistani CNIC has exactly 13 digits
+                          const limitedDigits = digits.slice(0, 13);
+
+                          // Format: XXXXX-XXXXXXX-X
+                          let formatted = limitedDigits;
+
+                          if (limitedDigits.length > 5) {
+                            formatted =
+                              limitedDigits.slice(0, 5) +
+                              "-" +
+                              limitedDigits.slice(5);
+                          }
+
+                          if (limitedDigits.length > 12) {
+                            formatted =
+                              limitedDigits.slice(0, 5) +
+                              "-" +
+                              limitedDigits.slice(5, 12) +
+                              "-" +
+                              limitedDigits.slice(12);
+                          }
+
+                          setPassenger((prev) => ({
+                            ...prev,
+                            cnic: formatted,
+                          }));
+                        }}
+                        placeholder="42127-3812739-8"
+                        maxLength={15}
+                        className="h-12 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-50"
+                      />
+
+                      <p className="mt-1.5 text-[11px] text-slate-400">
+                        Format: 42127-3812739-8
+                      </p>
+                    </div>
                     {/* GENDER */}
 
                     <div>
@@ -2852,6 +2889,16 @@ export default function CustomBookingPage() {
 
                           <div className="flex items-start justify-between gap-4 text-sm">
                             <span className="text-slate-500">
+                              CNIC
+                            </span>
+
+                            <span className="text-right font-bold text-slate-900">
+                              {passenger.cnic || "N/A"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-4 text-sm">
+                            <span className="text-slate-500">
                               Seats
                             </span>
 
@@ -2906,22 +2953,22 @@ export default function CustomBookingPage() {
 
                           {discountPercentage >
                             0 && (
-                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center justify-between text-sm">
 
-                              <span className="font-medium text-emerald-600">
-                                Discount (
-                                {
-                                  discountPercentage
-                                }%)
-                              </span>
+                                <span className="font-medium text-emerald-600">
+                                  Discount (
+                                  {
+                                    discountPercentage
+                                  }%)
+                                </span>
 
-                              <span className="font-bold text-emerald-600">
-                                - Rs.{" "}
-                                {discountAmount.toLocaleString()}
-                              </span>
+                                <span className="font-bold text-emerald-600">
+                                  - Rs.{" "}
+                                  {discountAmount.toLocaleString()}
+                                </span>
 
-                            </div>
-                          )}
+                              </div>
+                            )}
 
                           <div className="flex items-center justify-between border-t border-slate-200 pt-3">
 
@@ -2962,7 +3009,7 @@ export default function CustomBookingPage() {
                       disabled={
                         submitting ||
                         selectedSeats.length !==
-                          passengers
+                        passengers
                       }
                       className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -3056,22 +3103,22 @@ export default function CustomBookingPage() {
 
                   {discountPercentage >
                     0 && (
-                    <div className="mt-2 flex items-center justify-between text-sm">
+                      <div className="mt-2 flex items-center justify-between text-sm">
 
-                      <span className="text-emerald-600">
-                        Discount (
-                        {
-                          discountPercentage
-                        }%)
-                      </span>
+                        <span className="text-emerald-600">
+                          Discount (
+                          {
+                            discountPercentage
+                          }%)
+                        </span>
 
-                      <span className="font-bold text-emerald-600">
-                        - Rs.{" "}
-                        {discountAmount.toLocaleString()}
-                      </span>
+                        <span className="font-bold text-emerald-600">
+                          - Rs.{" "}
+                          {discountAmount.toLocaleString()}
+                        </span>
 
-                    </div>
-                  )}
+                      </div>
+                    )}
 
                   <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3">
 

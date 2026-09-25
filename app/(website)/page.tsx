@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Headphones,
   Star,
+  ArrowLeft,
 } from "lucide-react";
 
 import VideoHero from "@/components/hero/VideoHere";
@@ -165,82 +166,315 @@ export default function HomePage() {
 
 
       {/* =====================================================
-          POPULAR DESTINATIONS
-      ====================================================== */}
+ ```tsx
+"use client";
 
-      <section className="bg-gray-50 px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28">
+import { useRef, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  ArrowRight,
+  MapPin,
+} from "lucide-react";
 
-        <div className="mx-auto max-w-7xl">
+{/* =====================================================
+    POPULAR DESTINATIONS
+====================================================== */}
 
-          <div className="mb-10 flex flex-col gap-5 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
+<section className="bg-gray-50 px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-28">
 
-            <div>
+  <div className="mx-auto max-w-7xl">
 
-              <p className="mb-3 text-xs font-bold tracking-[0.3em] text-teal-700">
-                EXPLORE THE WORLD
-              </p>
+    {/* HEADER */}
+    <div className="mb-10 flex flex-col gap-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
 
-              <h2 className="font-serif text-4xl text-gray-900 sm:text-5xl">
-                Popular destinations
-              </h2>
+      <div>
+        <p className="mb-3 text-xs font-bold tracking-[0.3em] text-teal-700">
+          EXPLORE THE WORLD
+        </p>
 
-            </div>
+        <h2 className="font-serif text-4xl text-gray-900 sm:text-5xl">
+          Popular destinations
+        </h2>
+      </div>
 
-            <Link
-              href="/destinations"
-              className="group flex w-fit items-center gap-2 text-sm font-semibold text-teal-700"
-            >
-              View all destinations
+      <div className="flex items-center justify-between gap-5 sm:justify-end">
 
-              <ArrowRight
-                size={17}
-                className="transition-transform group-hover:translate-x-1"
-              />
-            </Link>
+        <Link
+          href="/destinations"
+          className="group flex w-fit items-center gap-2 text-sm font-semibold text-teal-700"
+        >
+          View all destinations
 
-          </div>
+          <ArrowRight
+            size={17}
+            className="transition-transform duration-300 group-hover:translate-x-1"
+          />
+        </Link>
 
+        {/* ARROWS */}
+        <div className="hidden items-center gap-2 sm:flex">
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <button
+            type="button"
+            onClick={() => {
+              const container = document.getElementById(
+                "destination-carousel"
+              );
 
-            {destinations.map((destination) => (
+              container?.scrollBy({
+                left: -400,
+                behavior: "smooth",
+              });
+            }}
+            className="group flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition-all duration-300 hover:border-teal-700 hover:bg-teal-700 hover:text-white hover:shadow-md"
+            aria-label="Previous destinations"
+          >
+            <ArrowLeft
+              size={19}
+              className="transition-transform duration-300 group-hover:-translate-x-0.5"
+            />
+          </button>
 
-              <Link
-                href="/booking"
-                key={destination.name}
-                className="group relative h-[330px] overflow-hidden rounded-2xl shadow-sm sm:h-[380px]"
-              >
+          <button
+            type="button"
+            onClick={() => {
+              const container = document.getElementById(
+                "destination-carousel"
+              );
 
-                <img
-                  src={destination.image}
-                  alt={destination.name}
-                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110"
-                />
-
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
-
-                  <div className="mb-2 flex items-center gap-1.5 text-xs text-white/80">
-                    <MapPin size={13} />
-                    {destination.country}
-                  </div>
-
-                  <h3 className="font-serif text-2xl text-white sm:text-3xl">
-                    {destination.name}
-                  </h3>
-
-                </div>
-
-              </Link>
-
-            ))}
-
-          </div>
+              container?.scrollBy({
+                left: 400,
+                behavior: "smooth",
+              });
+            }}
+            className="group flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition-all duration-300 hover:border-teal-700 hover:bg-teal-700 hover:text-white hover:shadow-md"
+            aria-label="Next destinations"
+          >
+            <ArrowRight
+              size={19}
+              className="transition-transform duration-300 group-hover:translate-x-0.5"
+            />
+          </button>
 
         </div>
 
-      </section>
+      </div>
+
+    </div>
+
+
+    {/* =====================================================
+        CAROUSEL
+    ====================================================== */}
+
+    <div className="relative">
+
+      <div
+        id="destination-carousel"
+        className="
+          flex
+          gap-4
+          overflow-x-auto
+          scroll-smooth
+          snap-x
+          snap-mandatory
+          pb-4
+          scrollbar-hide
+          sm:gap-5
+        "
+      >
+
+        {destinations.map((destination) => (
+
+          <Link
+            href="/booking"
+            key={destination.name}
+            className="
+              group
+              relative
+              h-[360px]
+              min-w-[85%]
+              snap-start
+              overflow-hidden
+              rounded-2xl
+              shadow-sm
+              sm:h-[400px]
+              sm:min-w-[calc(50%-10px)]
+              lg:h-[430px]
+              lg:min-w-[calc(25%-15px)]
+            "
+          >
+
+            {/* IMAGE */}
+            <img
+              src={destination.image}
+              alt={destination.name}
+              className="
+                absolute
+                inset-0
+                h-full
+                w-full
+                object-cover
+                transition-transform
+                duration-700
+                ease-out
+                group-hover:scale-110
+              "
+            />
+
+            {/* OVERLAY */}
+            <div
+              className="
+                absolute
+                inset-0
+                bg-gradient-to-t
+                from-black/85
+                via-black/20
+                to-transparent
+              "
+            />
+
+            {/* HOVER OVERLAY */}
+            <div
+              className="
+                absolute
+                inset-0
+                bg-teal-900/0
+                transition-colors
+                duration-500
+                group-hover:bg-teal-900/10
+              "
+            />
+
+            {/* CONTENT */}
+            <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/80">
+                <MapPin size={13} />
+                {destination.country}
+              </div>
+
+              <h3 className="font-serif text-2xl text-white sm:text-3xl">
+                {destination.name}
+              </h3>
+
+              {/* EXPLORE */}
+              <div
+                className="
+                  mt-3
+                  flex
+                  items-center
+                  gap-2
+                  text-sm
+                  font-medium
+                  text-white/0
+                  transition-all
+                  duration-300
+                  group-hover:text-white/90
+                "
+              >
+                Explore destination
+
+                <ArrowRight
+                  size={15}
+                  className="
+                    transition-transform
+                    duration-300
+                    group-hover:translate-x-1
+                  "
+                />
+              </div>
+
+            </div>
+
+          </Link>
+
+        ))}
+
+      </div>
+
+
+      {/* MOBILE ARROWS */}
+
+      <div className="mt-5 flex items-center justify-center gap-3 sm:hidden">
+
+        <button
+          type="button"
+          onClick={() => {
+            const container = document.getElementById(
+              "destination-carousel"
+            );
+
+            container?.scrollBy({
+              left: -300,
+              behavior: "smooth",
+            });
+          }}
+          className="
+            flex
+            h-11
+            w-11
+            items-center
+            justify-center
+            rounded-full
+            border
+            border-gray-200
+            bg-white
+            text-gray-700
+            shadow-sm
+            transition-all
+            duration-300
+            active:scale-95
+          "
+          aria-label="Previous destinations"
+        >
+          <ArrowLeft size={19} />
+        </button>
+
+
+        <button
+          type="button"
+          onClick={() => {
+            const container = document.getElementById(
+              "destination-carousel"
+            );
+
+            container?.scrollBy({
+              left: 300,
+              behavior: "smooth",
+            });
+          }}
+          className="
+            flex
+            h-11
+            w-11
+            items-center
+            justify-center
+            rounded-full
+            border
+            border-gray-200
+            bg-white
+            text-gray-700
+            shadow-sm
+            transition-all
+            duration-300
+            active:scale-95
+          "
+          aria-label="Next destinations"
+        >
+          <ArrowRight size={19} />
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
 
 
       {/* =====================================================

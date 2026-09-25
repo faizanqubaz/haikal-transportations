@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -67,11 +68,36 @@ export default function AvailabilityCard({ bus }: Props) {
     name: "",
     email: "",
     phone: "",
+    cnic: "",
     gender: "",
   });
 
   const totalFare =
     currentBus.price * selectedSeats.length;
+
+  // ============================================================
+  // CNIC FORMATTER
+  // Format: 42**0-6*****4-1
+  // 13 digits -> 5-7-1
+  // ============================================================
+
+  const formatCNIC = (value: string) => {
+    // Keep numbers only
+    const digits = value.replace(/\D/g, "").slice(0, 13);
+
+    if (digits.length <= 5) {
+      return digits;
+    }
+
+    if (digits.length <= 12) {
+      return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    }
+
+    return `${digits.slice(0, 5)}-${digits.slice(
+      5,
+      12
+    )}-${digits.slice(12)}`;
+  };
 
   // ============================================================
   // LOAD LATEST SEAT DATA
@@ -163,10 +189,21 @@ export default function AvailabilityCard({ bus }: Props) {
       !passenger.name.trim() ||
       !passenger.email.trim() ||
       !passenger.phone.trim() ||
+      !passenger.cnic.trim() ||
       !passenger.gender
     ) {
       setSubmitError(
         "Please complete all passenger information."
+      );
+      return;
+    }
+
+    // Validate CNIC
+    const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
+
+    if (!cnicRegex.test(passenger.cnic)) {
+      setSubmitError(
+        "Please enter a valid CNIC in this format: 4***0-6****4-1"
       );
       return;
     }
@@ -196,6 +233,7 @@ export default function AvailabilityCard({ bus }: Props) {
               name: passenger.name.trim(),
               email: passenger.email.trim(),
               phone: passenger.phone.trim(),
+              cnic: passenger.cnic.trim(),
               gender: passenger.gender,
             },
 
@@ -258,6 +296,7 @@ export default function AvailabilityCard({ bus }: Props) {
       name: "",
       email: "",
       phone: "",
+      cnic: "",
       gender: "",
     });
 
@@ -290,7 +329,7 @@ export default function AvailabilityCard({ bus }: Props) {
             className="h-full w-full object-cover"
           />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to- from-black/70 via-black/10 to-transparent" />
 
           <div className="absolute left-5 top-5 rounded-full bg-white px-4 py-2 text-xs font-bold text-gray-900 shadow-lg">
             {currentBus.busNumber}
@@ -606,6 +645,25 @@ export default function AvailabilityCard({ bus }: Props) {
                     </div>
                   </div>
 
+                  {/* Passenger CNIC */}
+
+                  <div className="mt-4 flex items-center gap-3">
+                    <ShieldCheck
+                      size={17}
+                      className="shrink-0 text-teal-700"
+                    />
+
+                    <div>
+                      <p className="text-xs text-gray-400">
+                        PASSENGER CNIC
+                      </p>
+
+                      <p className="text-sm font-bold text-gray-900">
+                        {passenger.cnic}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-4">
                     <span className="text-sm font-medium text-gray-500">
                       Total Fare
@@ -710,6 +768,9 @@ export default function AvailabilityCard({ bus }: Props) {
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">
                           Full Name
+                          <span className="ml-1 text-red-500">
+                            *
+                          </span>
                         </label>
 
                         <input
@@ -732,6 +793,9 @@ export default function AvailabilityCard({ bus }: Props) {
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">
                           Email Address
+                          <span className="ml-1 text-red-500">
+                            *
+                          </span>
                         </label>
 
                         <input
@@ -754,6 +818,9 @@ export default function AvailabilityCard({ bus }: Props) {
                       <div>
                         <label className="mb-2 block text-sm font-semibold text-gray-700">
                           Phone Number
+                          <span className="ml-1 text-red-500">
+                            *
+                          </span>
                         </label>
 
                         <input
@@ -769,6 +836,41 @@ export default function AvailabilityCard({ bus }: Props) {
                           placeholder="+92 300 1234567"
                           className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
                         />
+                      </div>
+
+                      {/* ==================================================
+                          CNIC
+                      ================================================== */}
+
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                          CNIC Number
+                          <span className="ml-1 text-red-500">
+                            *
+                          </span>
+                        </label>
+
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={passenger.cnic}
+                          disabled={submitting}
+                          maxLength={15}
+                          onChange={(e) =>
+                            setPassenger({
+                              ...passenger,
+                              cnic: formatCNIC(
+                                e.target.value
+                              ),
+                            })
+                          }
+                          placeholder="4***0-6****4-1"
+                          className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
+                        />
+
+                        <p className="mt-1.5 text-xs text-gray-400">
+                          Enter your 13-digit CNIC
+                        </p>
                       </div>
 
                       {/* ==================================================
@@ -955,6 +1057,23 @@ export default function AvailabilityCard({ bus }: Props) {
                         />
                       </div>
 
+                      {/* CNIC SUMMARY */}
+
+                      <div>
+                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+                          PASSENGER CNIC
+                        </label>
+
+                        <input
+                          disabled
+                          value={
+                            passenger.cnic ||
+                            "Not entered"
+                          }
+                          className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+                        />
+                      </div>
+
                       {/* TOTAL FARE */}
 
                       <div className="border-t border-gray-200 pt-3">
@@ -1006,6 +1125,7 @@ export default function AvailabilityCard({ bus }: Props) {
                       !passenger.name.trim() ||
                       !passenger.email.trim() ||
                       !passenger.phone.trim() ||
+                      !passenger.cnic.trim() ||
                       !passenger.gender ||
                       selectedSeats.length === 0 ||
                       submitting

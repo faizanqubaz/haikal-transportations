@@ -1,4 +1,8 @@
-import mongoose, { Schema, models, model } from "mongoose";
+import mongoose, {
+  Schema,
+  models,
+  model,
+} from "mongoose";
 
 const BookingSchema = new Schema(
   {
@@ -6,6 +10,7 @@ const BookingSchema = new Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
 
     passengerName: {
@@ -27,7 +32,13 @@ const BookingSchema = new Schema(
       trim: true,
     },
 
-    // Passenger gender
+    passengerCnic: {
+      type: String,
+      required: true,
+      trim: true,
+      match: /^\d{5}-\d{7}-\d{1}$/,
+    },
+
     gender: {
       type: String,
       enum: ["male", "female"],
@@ -39,6 +50,7 @@ const BookingSchema = new Schema(
     route: {
       type: String,
       required: true,
+      trim: true,
     },
 
     bus: {
@@ -52,7 +64,6 @@ const BookingSchema = new Schema(
       ref: "Driver",
     },
 
-    // Multiple seats can be selected in one booking
     seats: {
       type: [String],
       required: true,
@@ -65,20 +76,49 @@ const BookingSchema = new Schema(
 
     travelTime: {
       type: String,
+      trim: true,
     },
 
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: [
+        "pending",
+        "approved",
+        "rejected",
+      ],
       default: "pending",
     },
-    // Optional discount percentage
-discount: {
-  type: Number,
-  min: 0,
-  max: 100,
-  default: 0,
-},
+
+    pricePerSeat: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    subtotal: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    discount: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
+
+    discountAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
+    totalFare: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
 
     emailScheduledAt: {
       type: Date,
@@ -99,5 +139,8 @@ discount: {
   }
 );
 
-export default models.Booking ||
+const Booking =
+  models.Booking ||
   model("Booking", BookingSchema);
+
+export default Booking;

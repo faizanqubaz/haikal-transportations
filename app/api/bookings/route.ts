@@ -5,6 +5,8 @@ import Bus from "@/models/Bus";
 import { NextRequest, NextResponse } from "next/server";
 import Notification from "@/models/Notification";
 
+
+
 export async function POST(req: NextRequest) {
   const session = await mongoose.startSession();
 
@@ -12,47 +14,74 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     const body = await req.json();
-
+console.log('body for form',body)
     const {
       passenger,
       busId,
       seats,
-
-      // Optional percentage discount
-      // Example: 10 = 10%
       discount,
     } = body;
 
     console.log("BOOKING REQUEST:", body);
 
-    // ============================================
-    // VALIDATION
-    // ============================================
+    // ============================================================
+    // PASSENGER VALIDATION
+    // ============================================================
 
     if (
       !passenger?.name ||
       !passenger?.email ||
       !passenger?.phone ||
+      !passenger?.cnic ||
       !passenger?.gender
     ) {
       return NextResponse.json(
         {
           error:
-            "Passenger name, email, gender and phone are required",
+            "Passenger name, email, CNIC, gender and phone are required",
         },
         { status: 400 }
       );
     }
 
-    // ============================================
-    // VALIDATE GENDER
-    // ============================================
+    const name = String(passenger.name).trim();
+    const email = String(passenger.email).trim().toLowerCase();
+    const phone = String(passenger.phone).trim();
+
+    // ============================================================
+    // CNIC
+    // Format: 42000-6210664-1
+    // ============================================================
+
+    const passengerCnic = String(passenger.cnic).trim();
+console.log(
+  "ACTIVE BOOKING SCHEMA:",
+  Object.keys(Booking.schema.paths)
+);
+
+console.log(
+  "CNIC PATH:",
+  Booking.schema.path("passengerCnic")
+);
+    const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
+
+    if (!cnicRegex.test(passengerCnic)) {
+      return NextResponse.json(
+        {
+          error:
+            "CNIC must be in this format: 42000-92****1-1",
+        },
+        { status: 400 }
+      );
+    }
+
+    // ============================================================
+    // GENDER
+    // ============================================================
 
     const gender = String(passenger.gender)
       .trim()
       .toLowerCase();
-
-    console.log("gender", gender);
 
     if (!["male", "female"].includes(gender)) {
       return NextResponse.json(
@@ -63,9 +92,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ============================================
-    // VALIDATE BUS ID
-    // ============================================
+    // ============================================================
+    // BUS VALIDATION
+    // ============================================================
 
     if (!busId) {
       return NextResponse.json(
@@ -76,9 +105,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ============================================
-    // VALIDATE SEATS
-    // ============================================
+    // ============================================================
+    // SEAT VALIDATION
+    // ============================================================
 
     if (!Array.isArray(seats) || seats.length === 0) {
       return NextResponse.json(
@@ -89,10 +118,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ============================================
-    // NORMALIZE SEATS
-    // ============================================
-
     const selectedSeats = [
       ...new Set(
         seats.map((seat) =>
@@ -100,10 +125,6 @@ export async function POST(req: NextRequest) {
         )
       ),
     ];
-
-    // ============================================
-    // VALIDATE EMPTY SEATS
-    // ============================================
 
     if (
       selectedSeats.length === 0 ||
@@ -117,20 +138,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ============================================
-    // VALIDATE DISCOUNT
-    // ============================================
-    //
-    // Discount is OPTIONAL.
-    //
-    // Examples:
-    // undefined -> 0%
-    // 0         -> 0%
-    // 10        -> 10%
-    // 20        -> 20%
-    // 100       -> 100%
-    //
-    // ============================================
+    // ============================================================
+    // DISCOUNT
+    // ============================================================
 
     let discountPercentage = 0;
 
@@ -144,8 +154,7 @@ export async function POST(req: NextRequest) {
       if (!Number.isFinite(parsedDiscount)) {
         return NextResponse.json(
           {
-            error:
-              "Discount must be a valid percentage",
+            error: "Discount must be a valid number",
           },
           { status: 400 }
         );
@@ -158,7 +167,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Discount percentage must be between 0 and 100",
+              "Discount must be between 0 and 100",
           },
           { status: 400 }
         );
@@ -167,25 +176,16 @@ export async function POST(req: NextRequest) {
       discountPercentage = parsedDiscount;
     }
 
-    console.log(
-      "DISCOUNT PERCENTAGE:",
-      discountPercentage
-    );
-
-    // ============================================
-    // CREATED BOOKING
-    // ============================================
+    // ============================================================
+    // CREATE BOOKING TRANSACTION
+    // ============================================================
 
     let createdBooking: any = null;
 
-    // ============================================
-    // TRANSACTION
-    // ============================================
-
     await session.withTransaction(async () => {
-      // --------------------------------------------
+      // ----------------------------------------------------------
       // FIND BUS
-      // --------------------------------------------
+      // ----------------------------------------------------------
 
       const bus = await Bus.findById(busId).session(
         session
@@ -195,32 +195,18 @@ export async function POST(req: NextRequest) {
         throw new Error("BUS_NOT_FOUND");
       }
 
-      console.log(
-        "BUS SEATS:",
-        bus.seats.map((seat) => ({
-          seatNumber: seat.seatNumber,
-          status: seat.status,
-        }))
-      );
-
-      // --------------------------------------------
-      // CHECK SEATS
-      // --------------------------------------------
+      // ----------------------------------------------------------
+      // CHECK SEAT AVAILABILITY
+      // ----------------------------------------------------------
 
       const unavailableSeats: string[] = [];
 
       for (const seatNumber of selectedSeats) {
         const seat = bus.seats.find(
-          (s) =>
+          (s: any) =>
             String(s.seatNumber).trim() ===
             seatNumber
         );
-
-        console.log("CHECKING SEAT:", {
-          requested: seatNumber,
-          found: seat?.seatNumber,
-          status: seat?.status,
-        });
 
         if (
           !seat ||
@@ -229,10 +215,6 @@ export async function POST(req: NextRequest) {
           unavailableSeats.push(seatNumber);
         }
       }
-
-      // --------------------------------------------
-      // SEATS NOT AVAILABLE
-      // --------------------------------------------
 
       if (unavailableSeats.length > 0) {
         const error: any = new Error(
@@ -245,9 +227,9 @@ export async function POST(req: NextRequest) {
         throw error;
       }
 
-      // --------------------------------------------
-      // CALCULATE PRICE
-      // --------------------------------------------
+      // ----------------------------------------------------------
+      // PRICE
+      // ----------------------------------------------------------
 
       const pricePerSeat = Number(bus.price);
 
@@ -255,39 +237,14 @@ export async function POST(req: NextRequest) {
         !Number.isFinite(pricePerSeat) ||
         pricePerSeat < 0
       ) {
-        throw new Error("INVALID_BUS_PRICE");
+        throw new Error(
+          "INVALID_BUS_PRICE"
+        );
       }
 
-      // Example:
-      //
-      // pricePerSeat = 1000
-      // seats = 2
-      //
-      // subtotal = 2000
-      //
       const subtotal =
-        pricePerSeat * selectedSeats.length;
-
-      // --------------------------------------------
-      // DISCOUNT CALCULATION
-      // --------------------------------------------
-      //
-      // Example:
-      //
-      // subtotal = 1000
-      // discountPercentage = 10
-      //
-      // discountAmount =
-      // 1000 * (10 / 100)
-      //
-      // discountAmount = 100
-      //
-      // totalFare =
-      // 1000 - 100
-      //
-      // totalFare = 900
-      //
-      // --------------------------------------------
+        pricePerSeat *
+        selectedSeats.length;
 
       const discountAmount =
         subtotal *
@@ -296,20 +253,11 @@ export async function POST(req: NextRequest) {
       const totalFare =
         subtotal - discountAmount;
 
-      console.log("PRICE CALCULATION:", {
-        pricePerSeat,
-        selectedSeats: selectedSeats.length,
-        subtotal,
-        discountPercentage,
-        discountAmount,
-        totalFare,
-      });
+      // ----------------------------------------------------------
+      // CHANGE SELECTED SEATS TO PENDING
+      // ----------------------------------------------------------
 
-      // --------------------------------------------
-      // MARK SEATS AS PENDING
-      // --------------------------------------------
-
-      bus.seats.forEach((seat) => {
+      bus.seats.forEach((seat: any) => {
         if (
           selectedSeats.includes(
             String(seat.seatNumber).trim()
@@ -321,9 +269,9 @@ export async function POST(req: NextRequest) {
 
       await bus.save({ session });
 
-      // --------------------------------------------
+      // ----------------------------------------------------------
       // TRAVEL DATE
-      // --------------------------------------------
+      // ----------------------------------------------------------
 
       const travelDate = new Date(
         `${bus.date}T00:00:00`
@@ -339,17 +287,17 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // --------------------------------------------
+      // ----------------------------------------------------------
       // BOOKING REFERENCE
-      // --------------------------------------------
+      // ----------------------------------------------------------
 
       const bookingRef = `BK-${Date.now()
         .toString()
         .slice(-8)}`;
 
-      // --------------------------------------------
+      // ----------------------------------------------------------
       // CREATE BOOKING
-      // --------------------------------------------
+      // ----------------------------------------------------------
 
       const bookings =
         await Booking.create(
@@ -357,16 +305,16 @@ export async function POST(req: NextRequest) {
             {
               bookingRef,
 
-              passengerName:
-                passenger.name.trim(),
+              passengerName: name,
 
-              passengerEmail:
-                passenger.email
-                  .trim()
-                  .toLowerCase(),
+              passengerEmail: email,
 
-              passengerPhone:
-                passenger.phone.trim(),
+              passengerPhone: phone,
+
+              // IMPORTANT:
+              // Save frontend passenger.cnic
+              // into MongoDB passengerCnic
+              passengerCnic:passengerCnic,
 
               gender,
 
@@ -380,8 +328,7 @@ export async function POST(req: NextRequest) {
 
               travelDate,
 
-              travelTime:
-                bus.departure,
+              travelTime: bus.departure,
 
               status: "pending",
 
@@ -389,40 +336,26 @@ export async function POST(req: NextRequest) {
 
               whatsappSent: false,
 
-              // ==================================
-              // PRICE INFORMATION
-              // ==================================
-
               pricePerSeat,
 
               subtotal,
 
-              // Discount percentage
-              // Example: 10 means 10%
               discount:
                 discountPercentage,
 
-              // Actual money discounted
               discountAmount,
 
-              // Final amount customer needs to pay
               totalFare,
             },
           ],
           { session }
         );
+console.log('bookingsc',bookings)
+      createdBooking = bookings[0];
 
-      createdBooking =
-        bookings[0];
-
-      console.log(
-        "BOOKING CREATED INSIDE TRANSACTION:",
-        createdBooking._id
-      );
-
-      // --------------------------------------------
-      // CREATE ADMIN NOTIFICATION
-      // --------------------------------------------
+      // ----------------------------------------------------------
+      // NOTIFICATION
+      // ----------------------------------------------------------
 
       await Notification.create(
         [
@@ -432,15 +365,13 @@ export async function POST(req: NextRequest) {
             title:
               "New Booking Request",
 
-            message: `${passenger.name} requested ${
+            message: `${name} requested ${
               selectedSeats.length
             } seat${
               selectedSeats.length > 1
                 ? "s"
                 : ""
-            } on ${
-              bus.busNumber
-            }`,
+            } on ${bus.busNumber}`,
 
             bookingId:
               createdBooking._id,
@@ -450,16 +381,11 @@ export async function POST(req: NextRequest) {
         ],
         { session }
       );
-
-      console.log(
-        "ADMIN NOTIFICATION CREATED:",
-        createdBooking._id
-      );
     });
 
-    // ============================================
-    // SUCCESS
-    // ============================================
+    // ============================================================
+    // RESPONSE
+    // ============================================================
 
     return NextResponse.json(
       {
@@ -469,8 +395,7 @@ export async function POST(req: NextRequest) {
           "Your booking request has been submitted and is pending approval.",
 
         booking: {
-          _id:
-            createdBooking._id,
+          _id: createdBooking._id,
 
           bookingRef:
             createdBooking.bookingRef,
@@ -487,6 +412,9 @@ export async function POST(req: NextRequest) {
           passengerPhone:
             createdBooking.passengerPhone,
 
+          passengerCnic:
+            createdBooking.passengerCnic,
+
           gender:
             createdBooking.gender,
 
@@ -498,10 +426,6 @@ export async function POST(req: NextRequest) {
 
           travelTime:
             createdBooking.travelTime,
-
-          // ======================================
-          // PRICE RESPONSE
-          // ======================================
 
           pricePerSeat:
             createdBooking.pricePerSeat,
@@ -527,9 +451,9 @@ export async function POST(req: NextRequest) {
       error
     );
 
-    // ============================================
-    // SEATS UNAVAILABLE
-    // ============================================
+    // ============================================================
+    // SEAT ERROR
+    // ============================================================
 
     if (
       error.message ===
@@ -538,19 +462,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Some selected seats are no longer available",
-
+            "One or more selected seats are no longer available.",
           unavailableSeats:
-            error.unavailableSeats ||
-            [],
+            error.unavailableSeats || [],
         },
         { status: 409 }
       );
     }
 
-    // ============================================
+    // ============================================================
     // BUS NOT FOUND
-    // ============================================
+    // ============================================================
 
     if (
       error.message ===
@@ -564,9 +486,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ============================================
+    // ============================================================
     // INVALID DATE
-    // ============================================
+    // ============================================================
 
     if (
       error.message ===
@@ -581,9 +503,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ============================================
-    // INVALID BUS PRICE
-    // ============================================
+    // ============================================================
+    // INVALID PRICE
+    // ============================================================
 
     if (
       error.message ===
@@ -598,19 +520,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ============================================
+    // ============================================================
+    // MONGOOSE VALIDATION ERROR
+    // ============================================================
+
+    if (
+      error?.name ===
+      "ValidationError"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Booking validation failed",
+          details: error.message,
+        },
+        { status: 400 }
+      );
+    }
+
+    // ============================================================
     // GENERAL ERROR
-    // ============================================
+    // ============================================================
 
     return NextResponse.json(
       {
         error:
-          "Something went wrong while creating your booking",
-
+          "Unable to create booking",
         details:
           process.env.NODE_ENV ===
           "development"
-            ? error.message
+            ? error?.message
             : undefined,
       },
       { status: 500 }

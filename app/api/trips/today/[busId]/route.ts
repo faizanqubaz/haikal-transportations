@@ -24,9 +24,7 @@ export async function GET(
     // VALIDATE BUS ID
     // ============================================================
 
-    if (
-      !mongoose.Types.ObjectId.isValid(busId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(busId)) {
       return NextResponse.json(
         {
           success: false,
@@ -40,51 +38,41 @@ export async function GET(
     // QUERY PARAMETERS
     // ============================================================
 
-    const { searchParams } =
-      new URL(request.url);
+    const { searchParams } = new URL(request.url);
 
     const page = Math.max(
       1,
       Number(searchParams.get("page")) || 1
     );
 
-    const limit = Math.min(
-      50,
-      Math.max(
-        1,
-        Number(searchParams.get("limit")) || 10
-      )
-    );
+    const wantsAll =
+      searchParams.get("all") === "true";
+
+    const requestedLimit =
+      Number(searchParams.get("limit")) || 10;
+
+    const limit = wantsAll
+      ? Math.min(
+          2000,
+          Math.max(1, requestedLimit)
+        )
+      : Math.min(
+          50,
+          Math.max(1, requestedLimit)
+        );
 
     const search =
       searchParams.get("search")?.trim() || "";
 
-    const skip = (page - 1) * limit;
-
-    // ============================================================
-    // TODAY
-    // ============================================================
-
-    const today = new Date();
-
-    const todayString = [
-      today.getFullYear(),
-      String(today.getMonth() + 1).padStart(2, "0"),
-      String(today.getDate()).padStart(2, "0"),
-    ].join("-");
-
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const skip = wantsAll
+      ? 0
+      : (page - 1) * limit;
 
     // ============================================================
     // GET BUS
     // ============================================================
 
-    const bus = await Bus.findById(busId)
-      .lean();
+    const bus = await Bus.findById(busId).lean();
 
     if (!bus) {
       return NextResponse.json(
@@ -97,16 +85,22 @@ export async function GET(
     }
 
     // ============================================================
-    // SEARCH
+    // BOOKING QUERY
+    //
+    // IMPORTANT:
+    // We ONLY use bus ID here.
+    //
+    // We DO NOT filter by today's date.
+    //
+    // This means:
+    // - Today's bus works
+    // - Tomorrow's bus works
+    // - Next week's bus works
+    // - Any future trip works
     // ============================================================
 
     const bookingQuery: any = {
       bus: new mongoose.Types.ObjectId(busId),
-
-      travelDate: {
-        $gte: startOfDay,
-        $lte: endOfDay,
-      },
 
       status: {
         $in: [
@@ -116,6 +110,10 @@ export async function GET(
         ],
       },
     };
+
+    // ============================================================
+    // SEARCH
+    // ============================================================
 
     if (search) {
       bookingQuery.$or = [
@@ -138,6 +136,12 @@ export async function GET(
           },
         },
         {
+          passengerCnic: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
           bookingRef: {
             $regex: search,
             $options: "i",
@@ -150,57 +154,87 @@ export async function GET(
     // GET BOOKINGS + COUNT
     // ============================================================
 
-    const [bookings, totalBookings] =
-      await Promise.all([
-        Booking.find(bookingQuery)
-          .sort({
-            createdAt: -1,
-          })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+    let bookings;
+    let totalBookings;
 
-        Booking.countDocuments(
-          bookingQuery
-        ),
-      ]);
+    if (wantsAll) {
+      // Print all passengers for this bus/trip
+
+      [bookings, totalBookings] =
+        await Promise.all([
+          Booking.find(bookingQuery)
+            .sort({
+              createdAt: -1,
+            })
+            .lean(),
+
+          Booking.countDocuments(
+            bookingQuery
+          ),
+        ]);
+    } else {
+      // Normal pagination
+
+      [bookings, totalBookings] =
+        await Promise.all([
+          Booking.find(bookingQuery)
+            .sort({
+              createdAt: -1,
+            })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+
+          Booking.countDocuments(
+            bookingQuery
+          ),
+        ]);
+    }
 
     // ============================================================
     // BUS SEAT INFORMATION
     // ============================================================
 
-    const capacity = Array.isArray(
-      bus.seats
-    )
+    const capacity = Array.isArray(bus.seats)
       ? bus.seats.length
       : 0;
 
-    const availableSeats =
-      Array.isArray(bus.seats)
-        ? bus.seats.filter(
-            (seat: any) =>
-              seat.status ===
-              "available"
-          ).length
-        : 0;
+    const availableSeats = Array.isArray(
+      bus.seats
+    )
+      ? bus.seats.filter(
+          (seat: any) =>
+            seat.status === "available"
+        ).length
+      : 0;
 
-    const pendingSeats =
-      Array.isArray(bus.seats)
-        ? bus.seats.filter(
-            (seat: any) =>
-              seat.status ===
-              "pending"
-          ).length
-        : 0;
+    const pendingSeats = Array.isArray(
+      bus.seats
+    )
+      ? bus.seats.filter(
+          (seat: any) =>
+            seat.status === "pending"
+        ).length
+      : 0;
 
-    const bookedSeats =
-      Array.isArray(bus.seats)
-        ? bus.seats.filter(
-            (seat: any) =>
-              seat.status ===
-              "booked"
-          ).length
-        : 0;
+    const bookedSeats = Array.isArray(
+      bus.seats
+    )
+      ? bus.seats.filter(
+          (seat: any) =>
+            seat.status === "booked"
+        ).length
+      : 0;
+
+    // ============================================================
+    // PAGINATION
+    // ============================================================
+
+    const totalPages = wantsAll
+      ? 1
+      : Math.ceil(
+          totalBookings / limit
+        );
 
     // ============================================================
     // RESPONSE
@@ -231,7 +265,7 @@ export async function GET(
           }`,
 
         date:
-          bus.date || todayString,
+          bus.date || "-",
 
         departure:
           bus.departure || "-",
@@ -257,22 +291,22 @@ export async function GET(
       bookings,
 
       pagination: {
-        page,
-        limit,
+        page: wantsAll ? 1 : page,
+
+        limit: wantsAll
+          ? totalBookings
+          : limit,
 
         totalBookings,
 
-        totalPages: Math.ceil(
-          totalBookings / limit
-        ),
+        totalPages,
 
         hasNextPage:
-          page <
-          Math.ceil(
-            totalBookings / limit
-          ),
+          !wantsAll &&
+          page < totalPages,
 
         hasPreviousPage:
+          !wantsAll &&
           page > 1,
       },
 
@@ -280,7 +314,7 @@ export async function GET(
     });
   } catch (error) {
     console.error(
-      "TODAY TRIP DETAILS ERROR:",
+      "TRIP DETAILS ERROR:",
       error
     );
 
