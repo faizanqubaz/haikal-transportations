@@ -885,122 +885,119 @@ console.log('currentuser',data.user)
 
             {/* SETTINGS DROPDOWN */}
 
-            <div className="relative">
+            {isSuperAdmin && (
+    <div className="relative">
 
-              <button
-                type="button"
-                onClick={() =>
-                  setSettingsOpen(
-                    (current) => !current
-                  )
-                }
-                className={`
-                  group flex w-full items-center gap-3 rounded-xl
-                  px-3 py-3 text-sm font-medium transition
-                  ${
-                    settingsOpen
-                      ? "bg-white/10 text-white"
-                      : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }
-                `}
-              >
+      <button
+        type="button"
+        onClick={() =>
+          setSettingsOpen(
+            (current) => !current
+          )
+        }
+        className={`
+          group flex w-full items-center gap-3 rounded-xl
+          px-3 py-3 text-sm font-medium transition
+          ${
+            settingsOpen
+              ? "bg-white/10 text-white"
+              : "text-white/60 hover:bg-white/5 hover:text-white"
+          }
+        `}
+      >
 
-                <Settings
-                  size={19}
-                  className={
-                    settingsOpen
-                      ? "text-teal-300"
-                      : "text-white/40 group-hover:text-teal-300"
-                  }
-                />
+        <Settings
+          size={19}
+          className={
+            settingsOpen
+              ? "text-teal-300"
+              : "text-white/40 group-hover:text-teal-300"
+          }
+        />
 
-                <span>
-                  Settings
-                </span>
+        <span>
+          Settings
+        </span>
 
-                <ChevronRight
-                  size={16}
-                  className={`
-                    ml-auto transition-transform
-                    ${
-                      settingsOpen
-                        ? "rotate-90 text-teal-300"
-                        : "text-white/30"
-                    }
-                  `}
-                />
+        <ChevronRight
+          size={16}
+          className={`
+            ml-auto transition-transform
+            ${
+              settingsOpen
+                ? "rotate-90 text-teal-300"
+                : "text-white/30"
+            }
+          `}
+        />
 
-              </button>
+      </button>
 
-              {settingsOpen && (
-                <div className="mt-1 overflow-hidden rounded-xl border border-white/10 bg-black/10">
+      {settingsOpen && (
+        <div className="mt-1 overflow-hidden rounded-xl border border-white/10 bg-black/10">
 
-                  {/* INVITE ADMIN — SUPERADMIN ONLY */}
+          {/* INVITE ADMIN — SUPERADMIN ONLY */}
 
-                  {isSuperAdmin && (
-                    <button
-                      type="button"
-                      onClick={openInviteAdmin}
-                      className="group flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-white/60 transition hover:bg-white/5 hover:text-white"
-                    >
+          <button
+            type="button"
+            onClick={openInviteAdmin}
+            className="group flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-white/60 transition hover:bg-white/5 hover:text-white"
+          >
 
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-400/10">
-                        <UserPlus
-                          size={16}
-                          className="text-teal-300"
-                        />
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="font-semibold">
-                          Invite as Admin
-                        </p>
-
-                        <p className="mt-0.5 text-[10px] text-white/30">
-                          Send an admin invitation
-                        </p>
-                      </div>
-
-                    </button>
-                  )}
-
-                  {/* NORMAL SETTINGS */}
-
-                  <Link
-                    href="/admin/settings"
-                    onClick={() =>
-                      setSidebarOpen(false)
-                    }
-                    className={`group flex items-center gap-3 px-4 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white ${
-                      isSuperAdmin
-                        ? "border-t border-white/5"
-                        : ""
-                    }`}
-                  >
-
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5">
-                      <Settings
-                        size={16}
-                        className="text-white/40 group-hover:text-teal-300"
-                      />
-                    </div>
-
-                    <div>
-                      <p className="font-semibold">
-                        General Settings
-                      </p>
-
-                      <p className="mt-0.5 text-[10px] text-white/30">
-                        Manage dashboard settings
-                      </p>
-                    </div>
-
-                  </Link>
-
-                </div>
-              )}
-
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-400/10">
+              <UserPlus
+                size={16}
+                className="text-teal-300"
+              />
             </div>
+
+            <div className="min-w-0">
+              <p className="font-semibold">
+                Invite as Admin
+              </p>
+
+              <p className="mt-0.5 text-[10px] text-white/30">
+                Send an admin invitation
+              </p>
+            </div>
+
+          </button>
+
+          {/* NORMAL SETTINGS */}
+
+          <Link
+            href="/admin/settings"
+            onClick={() =>
+              setSidebarOpen(false)
+            }
+            className="group flex items-center gap-3 border-t border-white/5 px-4 py-3 text-sm text-white/60 transition hover:bg-white/5 hover:text-white"
+          >
+
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5">
+              <Settings
+                size={16}
+                className="text-white/40 group-hover:text-teal-300"
+              />
+            </div>
+
+            <div>
+              <p className="font-semibold">
+                General Settings
+              </p>
+
+              <p className="mt-0.5 text-[10px] text-white/30">
+                Manage dashboard settings
+              </p>
+            </div>
+
+          </Link>
+
+        </div>
+      )}
+
+    </div>
+  )}
+
 
             {/* LOGOUT */}
 
