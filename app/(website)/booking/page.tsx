@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Search,
   MapPin,
@@ -193,7 +192,27 @@ export default function BookingPage() {
     name: "",
     email: "",
     phone: "",
+    cnic: "",
+    gender: "",
   });
+
+  /* =======================================================
+     CNIC FORMATTER
+  ======================================================= */
+
+  function formatCNIC(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 13);
+
+    if (digits.length <= 5) {
+      return digits;
+    }
+
+    if (digits.length <= 12) {
+      return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    }
+
+    return `${digits.slice(0, 5)}-${digits.slice(5, 12)}-${digits.slice(12)}`;
+  }
 
   /* =======================================================
      CURRENT BOOKING BUS
@@ -553,15 +572,27 @@ async function handleViewSeats(bus: Bus) {
      SEAT SELECTION
   ======================================================= */
 
-  function handleSeatChange(
-    busId: string,
-    seats: string[]
-  ) {
-    setSelectedSeats((current) => ({
-      ...current,
-      [busId]: seats,
-    }));
-  }
+  const handleSeatChange = useCallback(
+    (busId: string, seats: string[]) => {
+      setSelectedSeats((current) => {
+        const previous = current[busId] ?? [];
+
+        // Prevent a state update when SeatMap sends the same selection.
+        if (
+          previous.length === seats.length &&
+          previous.every((seat, index) => seat === seats[index])
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [busId]: seats,
+        };
+      });
+    },
+    []
+  );
 
   /* =======================================================
      CONTINUE TO BOOKING
@@ -589,12 +620,23 @@ async function handleViewSeats(bus: Bus) {
     if (
       !passenger.name.trim() ||
       !passenger.email.trim() ||
-      !passenger.phone.trim()
+      !passenger.phone.trim() ||
+      !passenger.cnic.trim() ||
+      !passenger.gender
     ) {
       setSubmitError(
         "Please complete all passenger information."
       );
 
+      return;
+    }
+
+    const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
+
+    if (!cnicRegex.test(passenger.cnic)) {
+      setSubmitError(
+        "Please enter a valid CNIC in this format: 4***0-6****4-1"
+      );
       return;
     }
 
@@ -633,6 +675,8 @@ async function handleViewSeats(bus: Bus) {
               name: passenger.name.trim(),
               email: passenger.email.trim(),
               phone: passenger.phone.trim(),
+              cnic: passenger.cnic.trim(),
+              gender: passenger.gender,
             },
 
             busId: bookingBus._id,
@@ -707,6 +751,8 @@ async function handleViewSeats(bus: Bus) {
       name: "",
       email: "",
       phone: "",
+      cnic: "",
+      gender: "",
     });
 
     if (bookingBus) {
@@ -2292,6 +2338,60 @@ async function handleViewSeats(bus: Bus) {
 
                       </div>
 
+                      {/* CNIC */}
+
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                          CNIC Number
+                          <span className="ml-1 text-red-500">*</span>
+                        </label>
+
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={passenger.cnic}
+                          disabled={submitting}
+                          maxLength={15}
+                          onChange={(e) =>
+                            setPassenger({
+                              ...passenger,
+                              cnic: formatCNIC(e.target.value),
+                            })
+                          }
+                          placeholder="4***0-6****4-1"
+                          className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
+                        />
+
+                        <p className="mt-1.5 text-xs text-gray-400">
+                          Enter your 13-digit CNIC
+                        </p>
+                      </div>
+
+                      {/* GENDER */}
+
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-gray-700">
+                          Gender
+                          <span className="ml-1 text-red-500">*</span>
+                        </label>
+
+                        <select
+                          value={passenger.gender}
+                          disabled={submitting}
+                          onChange={(e) =>
+                            setPassenger({
+                              ...passenger,
+                              gender: e.target.value,
+                            })
+                          }
+                          className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:bg-gray-100"
+                        >
+                          <option value="">Select gender</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                        </select>
+                      </div>
+
                       {submitError && (
                         <div className="rounded-xl border border-red-100 bg-red-50 p-4">
 
@@ -2465,7 +2565,27 @@ async function handleViewSeats(bus: Bus) {
 
                         {/* FARE */}
 
-                        <div className="border-t border-gray-200 pt-3">
+                        <div className="mt-3 grid gap-3 border-t border-gray-200 pt-3 sm:grid-cols-2">
+                      <div>
+                        <p className="text-[10px] font-bold tracking-wider text-gray-400">
+                          PASSENGER GENDER
+                        </p>
+                        <p className="mt-1 text-sm font-semibold capitalize text-gray-900">
+                          {passenger.gender}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-bold tracking-wider text-gray-400">
+                          PASSENGER CNIC
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                          {passenger.cnic}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-3">
 
                           <div className="flex items-center justify-between">
 
@@ -2520,6 +2640,8 @@ async function handleViewSeats(bus: Bus) {
                       !passenger.name.trim() ||
                       !passenger.email.trim() ||
                       !passenger.phone.trim() ||
+                      !passenger.cnic.trim() ||
+                      !passenger.gender ||
                       bookingSelectedSeats.length ===
                         0 ||
                       submitting
