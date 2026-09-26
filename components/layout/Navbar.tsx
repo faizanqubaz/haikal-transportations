@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Menu,
   X,
@@ -30,6 +31,12 @@ const serviceLinks = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Only true once we're on the client (document exists)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Lock body scroll while mobile menu is open
   useEffect(() => {
@@ -40,6 +47,152 @@ export default function Navbar() {
     };
   }, [mobileOpen]);
 
+  // =====================================================
+  // MOBILE MENU CONTENT (backdrop + slide-in panel)
+  // Rendered via portal so it's NOT a descendant of the
+  // backdrop-blur header (backdrop-filter creates a
+  // containing block for position:fixed, which would
+  // otherwise clip this panel to the header's height).
+  // =====================================================
+  const mobileMenu = (
+    <>
+      {/* MOBILE MENU BACKDROP */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+          mobileOpen
+            ? "opacity-100"
+            : "pointer-events-none opacity-0"
+        }`}
+      />
+
+      {/* MOBILE SLIDE-IN PANEL */}
+      <div
+        className={`fixed inset-y-0 right-0 z-50 flex w-[85%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
+          mobileOpen
+            ? "translate-x-0"
+            : "translate-x-full"
+        }`}
+      >
+        {/* MOBILE PANEL HEADER */}
+        <div className="flex h-[88px] items-center justify-between border-b border-gray-100 px-5">
+          <Link
+            href="/"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-2.5"
+          >
+            <Image
+              src="/images/haikal.jpg"
+              alt="Haikal Tours logo"
+              width={80}
+              height={52}
+              className="h-12 w-20 rounded-lg object-cover shadow-sm"
+            />
+
+            <div className="flex flex-col leading-none">
+              <span className="text-base font-extrabold tracking-wide text-gray-900">
+                HAIKAL
+              </span>
+
+              <span className="mt-1 text-[9px] font-semibold tracking-[0.25em] text-teal-700">
+                TOURS
+              </span>
+            </div>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition hover:border-teal-600 hover:text-teal-700"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* MOBILE NAVIGATION */}
+        <nav className="flex flex-1 flex-col overflow-y-auto px-5 py-4">
+          <Link
+            href="/"
+            onClick={() => setMobileOpen(false)}
+            className="border-b border-gray-100 py-4 text-[15px] font-medium text-gray-800 transition hover:text-teal-700"
+          >
+            Home
+          </Link>
+
+          {/* MOBILE SERVICES ACCORDION */}
+          <div className="border-b border-gray-100">
+            <button
+              type="button"
+              onClick={() => setTourOpen((value) => !value)}
+              aria-expanded={tourOpen}
+              className="flex w-full items-center justify-between py-4 text-[15px] font-medium text-gray-800"
+            >
+              Services
+
+              <ChevronDown
+                size={17}
+                className={`text-gray-400 transition-transform duration-200 ${
+                  tourOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                tourOpen
+                  ? "max-h-64 pb-3"
+                  : "max-h-0"
+              }`}
+            >
+              {serviceLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block rounded-lg py-2.5 pl-3 text-sm text-gray-600 transition hover:bg-teal-50 hover:text-teal-700"
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {navItems.slice(1).map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className="border-b border-gray-100 py-4 text-[15px] font-medium text-gray-800 transition hover:text-teal-700"
+            >
+              {item.name}
+            </Link>
+          ))}
+
+          {/* MOBILE ACTIONS */}
+          <div className="mt-auto flex flex-col gap-3 pt-6">
+            <Link
+              href="/admin/login"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-teal-600 hover:text-teal-700"
+            >
+              <ShieldCheck size={18} />
+              Admin Sign In
+            </Link>
+
+            <Link
+              href="/booking"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg bg-teal-700 px-4 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-teal-800"
+            >
+              Book Now
+            </Link>
+          </div>
+        </nav>
+      </div>
+    </>
+  );
+
   return (
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur-md">
       {/* =====================================================
@@ -48,10 +201,7 @@ export default function Navbar() {
 
       <div className="mx-auto flex h-[96px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 
-        {/* =====================================================
-            LOGO
-        ====================================================== */}
-
+        {/* LOGO */}
         <Link
           href="/"
           onClick={() => setMobileOpen(false)}
@@ -77,14 +227,8 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* =====================================================
-            DESKTOP NAVIGATION
-        ====================================================== */}
-
+        {/* DESKTOP NAVIGATION */}
         <nav className="hidden items-center gap-1 lg:flex">
-
-          {/* Home */}
-
           <Link
             href="/"
             className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition hover:text-teal-700"
@@ -92,10 +236,7 @@ export default function Navbar() {
             Home
           </Link>
 
-          {/* =================================================
-              SERVICES DROPDOWN
-          ================================================== */}
-
+          {/* SERVICES DROPDOWN */}
           <div
             className="relative"
             onMouseEnter={() => setTourOpen(true)}
@@ -134,8 +275,6 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Remaining navigation items */}
-
           {navItems.slice(1).map((item) => (
             <Link
               key={item.href}
@@ -147,14 +286,8 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* =====================================================
-            DESKTOP ACTIONS
-        ====================================================== */}
-
+        {/* DESKTOP ACTIONS */}
         <div className="hidden items-center gap-3 lg:flex">
-
-          {/* Admin */}
-
           <Link
             href="/admin/login"
             className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-teal-600 hover:text-teal-700"
@@ -162,8 +295,6 @@ export default function Navbar() {
             <ShieldCheck size={17} />
             Admin
           </Link>
-
-          {/* Book Now */}
 
           <Link
             href="/booking"
@@ -173,10 +304,7 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* =====================================================
-            MOBILE MENU BUTTON
-        ====================================================== */}
-
+        {/* MOBILE MENU BUTTON */}
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -188,174 +316,9 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* =====================================================
-          MOBILE MENU BACKDROP
-      ====================================================== */}
-
-      <div
-        onClick={() => setMobileOpen(false)}
-        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
-          mobileOpen
-            ? "opacity-100"
-            : "pointer-events-none opacity-0"
-        }`}
-      />
-
-      {/* =====================================================
-          MOBILE SLIDE-IN PANEL
-      ====================================================== */}
-
-      <div
-        className={`fixed inset-y-0 right-0 z-50 flex w-[85%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
-          mobileOpen
-            ? "translate-x-0"
-            : "translate-x-full"
-        }`}
-      >
-        {/* =================================================
-            MOBILE PANEL HEADER
-        ================================================== */}
-
-        <div className="flex h-[88px] items-center justify-between border-b border-gray-100 px-5">
-
-          {/* Mobile Logo */}
-
-          <Link
-            href="/"
-            onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-2.5"
-          >
-            <Image
-              src="/images/haikal.jpg"
-              alt="Haikal Tours logo"
-              width={80}
-              height={52}
-              className="h-12 w-20 rounded-lg object-cover shadow-sm"
-            />
-
-            <div className="flex flex-col leading-none">
-              <span className="text-base font-extrabold tracking-wide text-gray-900">
-                HAIKAL
-              </span>
-
-              <span className="mt-1 text-[9px] font-semibold tracking-[0.25em] text-teal-700">
-                TOURS
-              </span>
-            </div>
-          </Link>
-
-          {/* Close button */}
-
-          <button
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition hover:border-teal-600 hover:text-teal-700"
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* =================================================
-            MOBILE NAVIGATION
-        ================================================== */}
-
-        <nav className="flex flex-1 flex-col overflow-y-auto px-5 py-4">
-
-          {/* Home */}
-
-          <Link
-            href="/"
-            onClick={() => setMobileOpen(false)}
-            className="border-b border-gray-100 py-4 text-[15px] font-medium text-gray-800 transition hover:text-teal-700"
-          >
-            Home
-          </Link>
-
-          {/* =================================================
-              MOBILE SERVICES ACCORDION
-          ================================================== */}
-
-          <div className="border-b border-gray-100">
-
-            <button
-              type="button"
-              onClick={() => setTourOpen((value) => !value)}
-              aria-expanded={tourOpen}
-              className="flex w-full items-center justify-between py-4 text-[15px] font-medium text-gray-800"
-            >
-              Services
-
-              <ChevronDown
-                size={17}
-                className={`text-gray-400 transition-transform duration-200 ${
-                  tourOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            <div
-              className={`overflow-hidden transition-all duration-300 ${
-                tourOpen
-                  ? "max-h-64 pb-3"
-                  : "max-h-0"
-              }`}
-            >
-              {serviceLinks.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block rounded-lg py-2.5 pl-3 text-sm text-gray-600 transition hover:bg-teal-50 hover:text-teal-700"
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Remaining navigation items */}
-
-          {navItems.slice(1).map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className="border-b border-gray-100 py-4 text-[15px] font-medium text-gray-800 transition hover:text-teal-700"
-            >
-              {item.name}
-            </Link>
-          ))}
-
-          {/* =================================================
-              MOBILE ACTIONS
-          ================================================== */}
-
-          <div className="mt-auto flex flex-col gap-3 pt-6">
-
-            {/* Admin Sign In */}
-
-            <Link
-              href="/admin/login"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-teal-600 hover:text-teal-700"
-            >
-              <ShieldCheck size={18} />
-              Admin Sign In
-            </Link>
-
-            {/* Book Now */}
-
-            <Link
-              href="/booking"
-              onClick={() => setMobileOpen(false)}
-              className="rounded-lg bg-teal-700 px-4 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-teal-800"
-            >
-              Book Now
-            </Link>
-          </div>
-        </nav>
-      </div>
+      {/* Mobile menu is portaled to <body> so backdrop-filter on
+          this header can't clip its fixed-position children */}
+      {mounted && createPortal(mobileMenu, document.body)}
     </header>
   );
 }
