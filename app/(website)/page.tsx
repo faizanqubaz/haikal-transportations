@@ -25,7 +25,7 @@ const destinations = [
   {
     name: "Gilgit",
     country: "Pakistan",
-    image: "/images/haikal.png",
+    image: "/images/haikall.png",
   },
   {
     name: "Hunza",

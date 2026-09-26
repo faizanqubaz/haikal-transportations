@@ -31,7 +31,7 @@ export default function AboutPage() {
 
           <div>
             <img
-              src="/images/haikal.png"
+              src="/images/haikall.png"
               alt="Haikal Tours"
               className="h-[500px] w-full rounded-3xl object-cover"
             />

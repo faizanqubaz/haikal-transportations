@@ -42,6 +42,7 @@ import {
   Copy,
   CheckCircle2,
 } from "lucide-react";
+import Image from "next/image";
 
 type TripStatus = "previous" | "today" | "upcoming";
 
@@ -759,7 +760,7 @@ console.log('currentuser',data.user)
         />
       )}
 
-      {/* SIDEBAR */}
+ {/* SIDEBAR */}
 
       <aside
         className={`
@@ -777,15 +778,20 @@ console.log('currentuser',data.user)
 
         {/* LOGO */}
 
-        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-white/10 px-6">
+        <div className="flex h-[88px] shrink-0 items-center justify-between border-b border-white/10 px-6">
 
           <Link
             href="/admin/dashboard"
             className="flex items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-400 text-lg font-black text-[#063d43] shadow-lg shadow-teal-500/30">
-              H
-            </div>
+            <Image
+              src="/images/haikal.jpg"
+              alt="Haikal Tours logo"
+              width={56}
+              height={56}
+              priority
+              className="h-12 w-12 rounded-full object-cover shadow-lg shadow-teal-500/30"
+            />
 
             <div>
               <p className="text-base font-black tracking-wide text-white">
