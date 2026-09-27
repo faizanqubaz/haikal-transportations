@@ -820,760 +820,877 @@ export default function CustomBookingPage() {
         calculatedDiscountAmount
       );
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-
-      <html lang="en">
-
-      <head>
-
-        <meta charset="UTF-8" />
-
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0"
-        />
-
-        <title>
-          Haikal Tours - ${ticketNumber}
-        </title>
-
-        <style>
-
-          * {
-            box-sizing: border-box;
-          }
-
-          html,
-          body {
-            margin: 0;
-            padding: 0;
-            background: #f1f5f9;
-            color: #0f172a;
-            font-family:
-              Arial,
-              Helvetica,
-              sans-serif;
-          }
-
-          body {
-            padding: 24px;
-          }
-
-          .ticket-container {
-            width: 100%;
-            max-width: 820px;
-            margin: 0 auto;
-          }
-
-          .ticket {
-            overflow: hidden;
-            background: #ffffff;
-            border: 1px solid #dbe4ea;
-            border-radius: 18px;
-            box-shadow:
-              0 10px 30px
-              rgba(15, 23, 42, 0.08);
-          }
-
-          .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            padding: 22px 26px;
-            color: white;
-            background: #0f766e;
-          }
-
-          .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-          }
-
-          .logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-            color: #0f766e;
-            background: white;
-            border-radius: 13px;
-            font-size: 20px;
-            font-weight: 900;
-          }
-
-          .brand-name {
-            font-size: 23px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
-          }
-
-          .brand-subtitle {
-            margin-top: 3px;
-            font-size: 10px;
-            opacity: 0.85;
-          }
-
-          .ticket-info {
-            text-align: right;
-          }
-
-          .ticket-label {
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            opacity: 0.8;
-          }
-
-          .ticket-number {
-            margin-top: 4px;
-            font-size: 17px;
-            font-weight: 900;
-          }
-
-          .status-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            padding: 11px 26px;
-            background: #f0fdfa;
-            border-bottom: 1px solid #ccfbf1;
-          }
-
-          .status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 10px;
-            color: #047857;
-            background: #d1fae5;
-            border-radius: 999px;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-          }
-
-          .issue-date {
-            color: #64748b;
-            font-size: 10px;
-          }
-
-          .content {
-            padding: 22px 26px;
-          }
-
-          .section {
-            margin-bottom: 18px;
-          }
-
-          .section:last-child {
-            margin-bottom: 0;
-          }
-
-          .section-title {
-            margin-bottom: 8px;
-            color: #0f766e;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.9px;
-          }
-
-          .journey {
-            padding: 14px 16px;
-            background: #f8fafc;
-            border: 1px solid #dbe4ea;
-            border-radius: 13px;
-          }
-
-          .journey-route {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 17px;
-            font-weight: 900;
-          }
-
-          .route-arrow {
-            color: #0f766e;
-          }
-
-          .route-name {
-            margin-top: 5px;
-            color: #64748b;
-            font-size: 10px;
-          }
-
-          .grid {
-            display: grid;
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr));
-            gap: 1px;
-            overflow: hidden;
-            background: #e2e8f0;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-          }
-
-          .item {
-            padding: 10px 13px;
-            background: white;
-          }
-
-          .label {
-            color: #94a3b8;
-            font-size: 8px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-
-          .value {
-            margin-top: 3px;
-            color: #0f172a;
-            font-size: 12px;
-            font-weight: 800;
-            word-break: break-word;
-          }
-
-          .seat-box {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            padding: 11px 14px;
-            background: #f0fdfa;
-            border: 1px dashed #99f6e4;
-            border-radius: 11px;
-          }
-
-          .seat-label {
-            color: #64748b;
-            font-size: 10px;
-            font-weight: 700;
-          }
-
-          .seat-value {
-            color: #115e59;
-            font-size: 13px;
-            font-weight: 900;
-            text-align: right;
-          }
-
-          .fare {
-            overflow: hidden;
-            border: 1px solid #dbe4ea;
-            border-radius: 12px;
-          }
-
-          .fare-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            padding: 8px 13px;
-            font-size: 11px;
-          }
-
-          .fare-label {
-            color: #64748b;
-          }
-
-          .fare-value {
-            color: #334155;
-            font-weight: 800;
-          }
-
-          .discount {
-            color: #059669;
-          }
-
-          .total {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 14px;
-            background: #f0fdfa;
-            border-top: 1px solid #e2e8f0;
-          }
-
-          .total-label {
-            color: #334155;
-            font-size: 13px;
-            font-weight: 900;
-          }
-
-          .total-value {
-            color: #0f766e;
-            font-size: 20px;
-            font-weight: 900;
-          }
-
-          .footer {
-            display: flex;
-            justify-content: space-between;
-            gap: 25px;
-            padding: 15px 26px;
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-          }
-
-          .footer-title {
-            color: #334155;
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-          }
-
-          .footer-text {
-            margin-top: 4px;
-            color: #64748b;
-            font-size: 9px;
-            line-height: 1.5;
-          }
-
-          .footer-right {
-            text-align: right;
-          }
-
-          @media print {
-
-            @page {
-              size: A4;
-              margin: 7mm;
-            }
-
-            html,
-            body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background: white !important;
-            }
-
-            .ticket-container {
-              width: 100%;
-              max-width: none;
-            }
-
-            .ticket {
-              border-radius: 0;
-              box-shadow: none;
-              border: 1px solid #cbd5e1;
-            }
-
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-          }
-
-          @media screen and (max-width: 600px) {
-
-            body {
-              padding: 8px;
-            }
-
-            .header {
-              align-items: flex-start;
-              flex-direction: column;
-              padding: 17px;
-            }
-
-            .ticket-info {
-              text-align: left;
-            }
-
-            .status-bar {
-              padding: 10px 17px;
-              align-items: flex-start;
-              flex-direction: column;
-            }
-
-            .content {
-              padding: 17px;
-            }
-
-            .grid {
-              grid-template-columns: 1fr;
-            }
-
-            .footer {
-              flex-direction: column;
-              padding: 15px 17px;
-            }
-
-            .footer-right {
-              text-align: left;
-            }
-
-            .journey-route {
-              font-size: 15px;
-            }
-          }
-
-        </style>
-
-      </head>
-
-      <body>
-
-        <div class="ticket-container">
-
-          <div class="ticket">
-
-            <div class="header">
-
-              <div class="brand">
-
-                <div class="logo">
-                  HT
-                </div>
-
-                <div>
-
-                  <div class="brand-name">
-                    Haikal Tours
-                  </div>
-
-                  <div class="brand-subtitle">
-                    Bus Ticket & Booking Service
-                  </div>
-
-                </div>
-
+   printWindow.document.write(`
+  <!DOCTYPE html>
+
+  <html lang="en">
+
+  <head>
+
+    <meta charset="UTF-8" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+
+    <title>
+      Haikal Tours - ${ticketNumber}
+    </title>
+
+    <style>
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f1f5f9;
+        color: #0f172a;
+        font-family:
+          Arial,
+          Helvetica,
+          sans-serif;
+      }
+
+      body {
+        padding: 24px;
+      }
+
+      .ticket-container {
+        width: 100%;
+        max-width: 820px;
+        margin: 0 auto;
+      }
+
+      .ticket {
+        overflow: hidden;
+        background: #ffffff;
+        border: 1px solid #dbe4ea;
+        border-radius: 18px;
+        box-shadow:
+          0 10px 30px
+          rgba(15, 23, 42, 0.08);
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 22px 26px;
+        color: white;
+        background: #0f766e;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        color: #0f766e;
+        background: white;
+        border-radius: 13px;
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .brand-name {
+        font-size: 23px;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+      }
+
+      .brand-subtitle {
+        margin-top: 3px;
+        font-size: 10px;
+        opacity: 0.85;
+      }
+
+      .ticket-info {
+        text-align: right;
+      }
+
+      .ticket-label {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        opacity: 0.8;
+      }
+
+      .ticket-number {
+        margin-top: 4px;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        padding: 11px 26px;
+        background: #f0fdfa;
+        border-bottom: 1px solid #ccfbf1;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        color: #047857;
+        background: #d1fae5;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .issue-date {
+        color: #64748b;
+        font-size: 10px;
+      }
+
+      .content {
+        padding: 22px 26px;
+      }
+
+      .section {
+        margin-bottom: 18px;
+      }
+
+      .section:last-child {
+        margin-bottom: 0;
+      }
+
+      .section-title {
+        margin-bottom: 8px;
+        color: #0f766e;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.9px;
+      }
+
+      .journey {
+        padding: 14px 16px;
+        background: #f8fafc;
+        border: 1px solid #dbe4ea;
+        border-radius: 13px;
+      }
+
+      .journey-route {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .route-arrow {
+        color: #0f766e;
+      }
+
+      .route-name {
+        margin-top: 5px;
+        color: #64748b;
+        font-size: 10px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+        gap: 1px;
+        overflow: hidden;
+        background: #e2e8f0;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+      }
+
+      .item {
+        padding: 10px 13px;
+        background: white;
+      }
+
+      .label {
+        color: #94a3b8;
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .value {
+        margin-top: 3px;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 800;
+        word-break: break-word;
+      }
+
+      .seat-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        padding: 11px 14px;
+        background: #f0fdfa;
+        border: 1px dashed #99f6e4;
+        border-radius: 11px;
+      }
+
+      .seat-label {
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .seat-value {
+        color: #115e59;
+        font-size: 13px;
+        font-weight: 900;
+        text-align: right;
+      }
+
+      .fare {
+        overflow: hidden;
+        border: 1px solid #dbe4ea;
+        border-radius: 12px;
+      }
+
+      .fare-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        padding: 8px 13px;
+        font-size: 11px;
+      }
+
+      .fare-label {
+        color: #64748b;
+      }
+
+      .fare-value {
+        color: #334155;
+        font-weight: 800;
+      }
+
+      .discount {
+        color: #059669;
+      }
+
+      .total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        background: #f0fdfa;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .total-label {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .total-value {
+        color: #0f766e;
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 25px;
+        padding: 15px 26px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .footer-title {
+        color: #334155;
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .footer-text {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 9px;
+        line-height: 1.5;
+      }
+
+      .footer-right {
+        text-align: right;
+      }
+
+      /* =====================================================
+         PRINT STYLES
+
+         @page + the base overrides below handle layout/color.
+         The block after that is new: it bumps every text size
+         up for print specifically, since the on-screen sizes
+         (8px-20px) read as tiny once actually printed on A4.
+      ====================================================== */
+
+      @media print {
+
+        @page {
+          size: A4;
+          margin: 10mm;
+        }
+
+        html,
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+        }
+
+        .ticket-container {
+          width: 100%;
+          max-width: none;
+        }
+
+        .ticket {
+          border-radius: 0;
+          box-shadow: none;
+          border: 1px solid #cbd5e1;
+        }
+
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* ---- print-only size boost ---- */
+
+        .header {
+          padding: 28px 32px;
+        }
+
+        .logo {
+          width: 60px;
+          height: 60px;
+          font-size: 26px;
+          border-radius: 16px;
+        }
+
+        .brand-name {
+          font-size: 30px;
+        }
+
+        .brand-subtitle {
+          font-size: 13px;
+        }
+
+        .ticket-label {
+          font-size: 12px;
+        }
+
+        .ticket-number {
+          font-size: 22px;
+        }
+
+        .status-bar {
+          padding: 16px 32px;
+        }
+
+        .status {
+          padding: 7px 14px;
+          font-size: 13px;
+        }
+
+        .issue-date {
+          font-size: 13px;
+        }
+
+        .content {
+          padding: 30px 32px;
+        }
+
+        .section {
+          margin-bottom: 26px;
+        }
+
+        .section-title {
+          font-size: 14px;
+        }
+
+        .journey {
+          padding: 20px 22px;
+        }
+
+        .journey-route {
+          font-size: 24px;
+        }
+
+        .route-name {
+          font-size: 14px;
+        }
+
+        .item {
+          padding: 14px 18px;
+        }
+
+        .label {
+          font-size: 11px;
+        }
+
+        .value {
+          font-size: 16px;
+        }
+
+        .seat-box {
+          padding: 16px 20px;
+        }
+
+        .seat-label {
+          font-size: 14px;
+        }
+
+        .seat-value {
+          font-size: 18px;
+        }
+
+        .fare-row {
+          padding: 12px 18px;
+          font-size: 15px;
+        }
+
+        .total {
+          padding: 16px 20px;
+        }
+
+        .total-label {
+          font-size: 18px;
+        }
+
+        .total-value {
+          font-size: 28px;
+        }
+
+        .footer {
+          padding: 20px 32px;
+        }
+
+        .footer-title {
+          font-size: 13px;
+        }
+
+        .footer-text {
+          font-size: 13px;
+        }
+      }
+
+      @media screen and (max-width: 600px) {
+
+        body {
+          padding: 8px;
+        }
+
+        .header {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 17px;
+        }
+
+        .ticket-info {
+          text-align: left;
+        }
+
+        .status-bar {
+          padding: 10px 17px;
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .content {
+          padding: 17px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .footer {
+          flex-direction: column;
+          padding: 15px 17px;
+        }
+
+        .footer-right {
+          text-align: left;
+        }
+
+        .journey-route {
+          font-size: 15px;
+        }
+      }
+
+      @media print and (max-width: 600px) {
+
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .ticket-info {
+          text-align: left;
+        }
+
+        .status-bar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .footer {
+          flex-direction: column;
+        }
+
+        .footer-right {
+          text-align: left;
+        }
+      }
+
+    </style>
+
+  </head>
+
+  <body>
+
+    <div class="ticket-container">
+
+      <div class="ticket">
+
+        <div class="header">
+
+          <div class="brand">
+
+            <div class="logo">
+              HT
+            </div>
+
+            <div>
+
+              <div class="brand-name">
+                Haikal Tours
               </div>
 
-              <div class="ticket-info">
-
-                <div class="ticket-label">
-                  Ticket Number
-                </div>
-
-                <div class="ticket-number">
-                  ${ticketNumber}
-                </div>
-
+              <div class="brand-subtitle">
+                Bus Ticket & Booking Service
               </div>
 
             </div>
 
-            <div class="status-bar">
+          </div>
 
-              <div class="status">
-                ✓ Booking Submitted
+          <div class="ticket-info">
+
+            <div class="ticket-label">
+              Ticket Number
+            </div>
+
+            <div class="ticket-number">
+              ${ticketNumber}
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="status-bar">
+
+          <div class="status">
+            ✓ Booking Submitted
+          </div>
+
+          <div class="issue-date">
+            Ticket issued: ${issueDate}
+          </div>
+
+        </div>
+
+        <div class="content">
+
+          <div class="section">
+
+            <div class="section-title">
+              Journey
+            </div>
+
+            <div class="journey">
+
+              <div class="journey-route">
+
+                <span>
+                  ${pickupLocation}
+                </span>
+
+                <span class="route-arrow">
+                  →
+                </span>
+
+                <span>
+                  ${destinationLocation}
+                </span>
+
               </div>
 
-              <div class="issue-date">
-                Ticket issued: ${issueDate}
+              <div class="route-name">
+                ${route}
               </div>
 
             </div>
 
-            <div class="content">
+          </div>
 
-              <div class="section">
+          <div class="section">
 
-                <div class="section-title">
-                  Journey
+            <div class="section-title">
+              Travel Details
+            </div>
+
+            <div class="grid">
+
+              <div class="item">
+                <div class="label">
+                  Travel Date
                 </div>
-
-                <div class="journey">
-
-                  <div class="journey-route">
-
-                    <span>
-                      ${pickupLocation}
-                    </span>
-
-                    <span class="route-arrow">
-                      →
-                    </span>
-
-                    <span>
-                      ${destinationLocation}
-                    </span>
-
-                  </div>
-
-                  <div class="route-name">
-                    ${route}
-                  </div>
-
+                <div class="value">
+                  ${travelDate}
                 </div>
-
               </div>
 
-              <div class="section">
-
-                <div class="section-title">
-                  Travel Details
+              <div class="item">
+                <div class="label">
+                  Departure Time
                 </div>
-
-                <div class="grid">
-
-                  <div class="item">
-                    <div class="label">
-                      Travel Date
-                    </div>
-                    <div class="value">
-                      ${travelDate}
-                    </div>
-                  </div>
-
-                  <div class="item">
-                    <div class="label">
-                      Departure Time
-                    </div>
-                    <div class="value">
-                      ${departureTime}
-                    </div>
-                  </div>
-
-                  <div class="item">
-                    <div class="label">
-                      Arrival Time
-                    </div>
-                    <div class="value">
-                      ${arrivalTime}
-                    </div>
-                  </div>
-
-                  <div class="item">
-                    <div class="label">
-                      Bus Number
-                    </div>
-                    <div class="value">
-                      ${busNumber}
-                    </div>
-                  </div>
-
-                  <div class="item">
-                    <div class="label">
-                      Pickup Location
-                    </div>
-                    <div class="value">
-                      ${pickupLocation}
-                    </div>
-                  </div>
-
-                  <div class="item">
-                    <div class="label">
-                      Destination
-                    </div>
-                    <div class="value">
-                      ${destinationLocation}
-                    </div>
-                  </div>
-
+                <div class="value">
+                  ${departureTime}
                 </div>
-
               </div>
 
-              <div class="section">
+              <div class="item">
+                <div class="label">
+                  Arrival Time
+                </div>
+                <div class="value">
+                  ${arrivalTime}
+                </div>
+              </div>
 
-                <div class="section-title">
-                  Passenger Information
+              <div class="item">
+                <div class="label">
+                  Bus Number
+                </div>
+                <div class="value">
+                  ${busNumber}
+                </div>
+              </div>
+
+              <div class="item">
+                <div class="label">
+                  Pickup Location
+                </div>
+                <div class="value">
+                  ${pickupLocation}
+                </div>
+              </div>
+
+              <div class="item">
+                <div class="label">
+                  Destination
+                </div>
+                <div class="value">
+                  ${destinationLocation}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="section">
+
+            <div class="section-title">
+              Passenger Information
+            </div>
+
+            <div class="grid">
+
+              <div class="item">
+                <div class="label">
+                  Passenger Name
                 </div>
 
-                <div class="grid">
+                <div class="value">
+                  ${passengerName}
+                </div>
+              </div>
 
-                  <div class="item">
-                    <div class="label">
-                      Passenger Name
-                    </div>
+              <div class="item">
+                <div class="label">
+                  Gender
+                </div>
 
-                    <div class="value">
-                      ${passengerName}
-                    </div>
-                  </div>
+                <div class="value">
+                  ${passengerGender}
+                </div>
+              </div>
 
-                  <div class="item">
-                    <div class="label">
-                      Gender
-                    </div>
-
-                    <div class="value">
-                      ${passengerGender}
-                    </div>
-                  </div>
-
-                  <div class="item">
-  <div class="label">
-    CNIC
-  </div>
-
-  <div class="value">
-    ${passengerCnic}
-  </div>
+              <div class="item">
+<div class="label">
+  CNIC
 </div>
 
-                  <div class="item">
-                    <div class="label">
-                      Contact Number
-                    </div>
+<div class="value">
+  ${passengerCnic}
+</div>
+</div>
 
-                    <div class="value">
-                      ${passengerPhone}
-                    </div>
-                  </div>
-
-                  <div class="item">
-                    <div class="label">
-                      Email
-                    </div>
-
-                    <div class="value">
-                      ${passengerEmail}
-                    </div>
-                  </div>
-
+              <div class="item">
+                <div class="label">
+                  Contact Number
                 </div>
 
+                <div class="value">
+                  ${passengerPhone}
+                </div>
               </div>
 
-              <div class="section">
-
-                <div class="section-title">
-                  Seat Information
+              <div class="item">
+                <div class="label">
+                  Email
                 </div>
 
-                <div class="seat-box">
-
-                  <div class="seat-label">
-                    Selected Seat${seatCount !== 1
-        ? "s"
-        : ""
-      }
-                  </div>
-
-                  <div class="seat-value">
-                    ${seatsText}
-                  </div>
-
+                <div class="value">
+                  ${passengerEmail}
                 </div>
-
-              </div>
-
-              <div class="section">
-
-                <div class="section-title">
-                  Fare Summary
-                </div>
-
-                <div class="fare">
-
-                  <div class="fare-row">
-
-                    <span class="fare-label">
-                      Fare per seat
-                    </span>
-
-                    <span class="fare-value">
-                      ${formatCurrency(
-        pricePerSeat
-      )}
-                    </span>
-
-                  </div>
-
-                  <div class="fare-row">
-
-                    <span class="fare-label">
-                      Number of seats
-                    </span>
-
-                    <span class="fare-value">
-                      ${seatCount}
-                    </span>
-
-                  </div>
-
-                  <div class="fare-row">
-
-                    <span class="fare-label">
-                      Subtotal
-                    </span>
-
-                    <span class="fare-value">
-                      ${formatCurrency(
-        calculatedSubtotal
-      )}
-                    </span>
-
-                  </div>
-
-                  ${calculatedDiscountPercentage >
-        0
-        ? `
-                        <div class="fare-row discount">
-
-                          <span>
-                            Discount (${calculatedDiscountPercentage}%)
-                          </span>
-
-                          <span>
-                            - ${formatCurrency(
-          calculatedDiscountAmount
-        )}
-                          </span>
-
-                        </div>
-                      `
-        : ""
-      }
-
-                  <div class="total">
-
-                    <span class="total-label">
-                      Total Fare
-                    </span>
-
-                    <span class="total-value">
-                      ${formatCurrency(
-        calculatedTotal
-      )}
-                    </span>
-
-                  </div>
-
-                </div>
-
               </div>
 
             </div>
 
-            <div class="footer">
+          </div>
 
-              <div>
+          <div class="section">
 
-                <div class="footer-title">
-                  Important Information
-                </div>
+            <div class="section-title">
+              Seat Information
+            </div>
 
-                <div class="footer-text">
-                  Please keep this ticket with you
-                  during your journey.<br />
-                  Please arrive at the pickup point
-                  at least 15 minutes before departure.
-                </div>
+            <div class="seat-box">
+
+              <div class="seat-label">
+                Selected Seat${seatCount !== 1
+    ? "s"
+    : ""
+  }
+              </div>
+
+              <div class="seat-value">
+                ${seatsText}
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="section">
+
+            <div class="section-title">
+              Fare Summary
+            </div>
+
+            <div class="fare">
+
+              <div class="fare-row">
+
+                <span class="fare-label">
+                  Fare per seat
+                </span>
+
+                <span class="fare-value">
+                  ${formatCurrency(
+    pricePerSeat
+  )}
+                </span>
 
               </div>
 
-              <div class="footer-right">
+              <div class="fare-row">
 
-                <div class="footer-title">
-                  Haikal Tours
-                </div>
+                <span class="fare-label">
+                  Number of seats
+                </span>
 
-                <div class="footer-text">
-                  Bus Booking & Travel Service<br />
-                  Passenger Contact: ${passengerPhone}
-                </div>
+                <span class="fare-value">
+                  ${seatCount}
+                </span>
+
+              </div>
+
+              <div class="fare-row">
+
+                <span class="fare-label">
+                  Subtotal
+                </span>
+
+                <span class="fare-value">
+                  ${formatCurrency(
+    calculatedSubtotal
+  )}
+                </span>
+
+              </div>
+
+              ${calculatedDiscountPercentage >
+    0
+    ? `
+                    <div class="fare-row discount">
+
+                      <span>
+                        Discount (${calculatedDiscountPercentage}%)
+                      </span>
+
+                      <span>
+                        - ${formatCurrency(
+      calculatedDiscountAmount
+    )}
+                      </span>
+
+                    </div>
+                  `
+    : ""
+  }
+
+              <div class="total">
+
+                <span class="total-label">
+                  Total Fare
+                </span>
+
+                <span class="total-value">
+                  ${formatCurrency(
+    calculatedTotal
+  )}
+                </span>
 
               </div>
 
@@ -1583,30 +1700,66 @@ export default function CustomBookingPage() {
 
         </div>
 
-        <script>
+        <div class="footer">
 
-          window.onload = function () {
+          <div>
 
-            setTimeout(function () {
-              window.print();
-            }, 500);
+            <div class="footer-title">
+              Important Information
+            </div>
 
-          };
+            <div class="footer-text">
+              Please keep this ticket with you
+              during your journey.<br />
+              Please arrive at the pickup point
+              at least 15 minutes before departure.
+            </div>
 
-          window.onafterprint = function () {
+          </div>
 
-            setTimeout(function () {
-              window.close();
-            }, 300);
+          <div class="footer-right">
 
-          };
+            <div class="footer-title">
+              Haikal Tours
+            </div>
 
-        </script>
+            <div class="footer-text">
+              Bus Booking & Travel Service<br />
+              Passenger Contact: ${passengerPhone}
+            </div>
 
-      </body>
+          </div>
 
-      </html>
-    `);
+        </div>
+
+      </div>
+
+    </div>
+
+    <script>
+
+      window.onload = function () {
+
+        setTimeout(function () {
+          window.print();
+        }, 500);
+
+      };
+
+      window.onafterprint = function () {
+
+        setTimeout(function () {
+          window.close();
+        }, 300);
+
+      };
+
+    </script>
+
+  </body>
+
+  </html>
+`);
 
     printWindow.document.close();
   };
