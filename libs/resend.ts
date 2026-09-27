@@ -23,10 +23,12 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#039;");
 }
 
+
 export async function sendBookingConfirmationEmail(
   booking: BookingEmailData
 ) {
-  console.log('running the email')
+  console.log("running the email");
+
   if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY is not configured");
   }
@@ -35,9 +37,7 @@ export async function sendBookingConfirmationEmail(
     throw new Error("Passenger email is missing");
   }
 
-  const dateStr = new Date(
-    booking.travelDate
-  ).toLocaleDateString("en-US", {
+  const dateStr = new Date(booking.travelDate).toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -45,41 +45,40 @@ export async function sendBookingConfirmationEmail(
   });
 
   const seats =
-    booking.seats && booking.seats.length > 0
-      ? booking.seats
-      : [];
+    booking.seats && booking.seats.length > 0 ? booking.seats : [];
 
-  const seatDisplay =
-    seats.length > 0
-      ? seats.join(", ")
-      : "-";
+  const seatDisplay = seats.length > 0 ? seats.join(", ") : "-";
 
-  const name = escapeHtml(
-    booking.passengerName
+  const name = escapeHtml(booking.passengerName);
+
+  const bookingRef = escapeHtml(booking.bookingRef);
+
+  const route = escapeHtml(booking.route);
+
+  const travelTime = escapeHtml(booking.travelTime || "-");
+
+  const busNumber = escapeHtml(booking.busNumber || "-");
+
+  const passengerPhone = escapeHtml(booking.passengerPhone || "-");
+
+  // ============================================================
+  // HAIKAL CONTACT
+  // ============================================================
+
+  const haikalContactNumber = "03139929970";
+
+  const haikalWhatsAppNumber = "923139929970";
+
+  const haikalWhatsAppMessage = encodeURIComponent(
+    `Hello Haikal Tours, I need help regarding my booking ${booking.bookingRef}.`
   );
 
-  const bookingRef = escapeHtml(
-    booking.bookingRef
-  );
-
-  const route = escapeHtml(
-    booking.route
-  );
-
-  const travelTime = escapeHtml(
-    booking.travelTime || "-"
-  );
-
-  const busNumber = escapeHtml(
-    booking.busNumber || "-"
-  );
-
-  const passengerPhone = escapeHtml(
-    booking.passengerPhone || "-"
-  );
+  const haikalWhatsAppUrl = `https://wa.me/${haikalWhatsAppNumber}?text=${haikalWhatsAppMessage}`;
 
   const subject = `Booking Confirmed • ${booking.bookingRef} • Haikal Tours`;
-console.log('subject',subject)
+
+  console.log("subject", subject);
+
   const result = await resend.emails.send({
     from:
       process.env.RESEND_FROM_EMAIL ||
@@ -92,8 +91,10 @@ console.log('subject',subject)
     html: `
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
@@ -136,7 +137,9 @@ console.log('subject',subject)
   "
 >
 
+<!-- ========================================================= -->
 <!-- HEADER -->
+<!-- ========================================================= -->
 
 <tr>
 <td
@@ -190,7 +193,10 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
+<!-- ========================================================= -->
 <!-- SUCCESS -->
+<!-- ========================================================= -->
 
 <tr>
 <td style="padding:35px 35px 20px;text-align:center;">
@@ -235,7 +241,10 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
+<!-- ========================================================= -->
 <!-- BOOKING REFERENCE -->
+<!-- ========================================================= -->
 
 <tr>
 <td style="padding:15px 35px;">
@@ -292,7 +301,10 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
+<!-- ========================================================= -->
 <!-- TRIP CARD -->
+<!-- ========================================================= -->
 
 <tr>
 <td style="padding:15px 35px;">
@@ -345,6 +357,7 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
 <tr>
 <td
   style="
@@ -369,6 +382,7 @@ console.log('subject',subject)
   ${escapeHtml(dateStr)}
 </td>
 </tr>
+
 
 <tr>
 <td
@@ -395,6 +409,7 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
 <tr>
 <td
   style="
@@ -419,6 +434,7 @@ console.log('subject',subject)
   ${busNumber}
 </td>
 </tr>
+
 
 <tr>
 <td
@@ -448,7 +464,10 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
+<!-- ========================================================= -->
 <!-- PASSENGER -->
+<!-- ========================================================= -->
 
 <tr>
 <td style="padding:15px 35px;">
@@ -494,6 +513,7 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
 <tr>
 <td
   style="
@@ -517,6 +537,7 @@ console.log('subject',subject)
   ${passengerPhone}
 </td>
 </tr>
+
 
 <tr>
 <td
@@ -548,10 +569,13 @@ console.log('subject',subject)
 </td>
 </tr>
 
-<!-- IMPORTANT -->
+
+<!-- ========================================================= -->
+<!-- TRAVEL REMINDER -->
+<!-- ========================================================= -->
 
 <tr>
-<td style="padding:15px 35px 25px;">
+<td style="padding:15px 35px 20px;">
 
 <table
   width="100%"
@@ -597,7 +621,125 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
+<!-- ========================================================= -->
+<!-- HAIKAL CONTACT -->
+<!-- ========================================================= -->
+
+<tr>
+<td style="padding:5px 35px 25px;">
+
+<table
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+  border="0"
+  style="
+    background:#eff8f8;
+    border:1px solid #d7eeee;
+    border-radius:14px;
+  "
+>
+<tr>
+<td
+  style="
+    padding:20px;
+    text-align:center;
+  "
+>
+
+  <div
+    style="
+      color:#718082;
+      font-size:10px;
+      font-weight:bold;
+      text-transform:uppercase;
+      letter-spacing:2px;
+    "
+  >
+    Need Help?
+  </div>
+
+  <div
+    style="
+      margin-top:7px;
+      color:#063d43;
+      font-size:16px;
+      font-weight:900;
+    "
+  >
+    Contact Haikal Tours
+  </div>
+
+  <div
+    style="
+      margin-top:6px;
+      color:#718082;
+      font-size:12px;
+      line-height:19px;
+    "
+  >
+    For booking questions, changes, or travel assistance,
+    contact us directly.
+  </div>
+
+
+  <!-- PHONE -->
+
+  <div style="margin-top:15px;">
+
+    <a
+      href="tel:${haikalContactNumber}"
+      style="
+        display:inline-block;
+        padding:11px 20px;
+        background:#063d43;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:9px;
+        font-size:13px;
+        font-weight:bold;
+      "
+    >
+      📞 ${haikalContactNumber}
+    </a>
+
+  </div>
+
+
+  <!-- WHATSAPP -->
+
+  <div style="margin-top:10px;">
+
+    <a
+      href="${haikalWhatsAppUrl}"
+      style="
+        display:inline-block;
+        padding:11px 20px;
+        background:#25D366;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:9px;
+        font-size:13px;
+        font-weight:bold;
+      "
+    >
+      💬 Chat on WhatsApp
+    </a>
+
+  </div>
+
+</td>
+</tr>
+</table>
+
+</td>
+</tr>
+
+
+<!-- ========================================================= -->
 <!-- FOOTER -->
+<!-- ========================================================= -->
 
 <tr>
 <td
@@ -644,6 +786,7 @@ console.log('subject',subject)
 </td>
 </tr>
 
+
 </table>
 
 </td>
@@ -660,6 +803,8 @@ console.log('subject',subject)
       result.error.message || "Failed to send email"
     );
   }
-console.log('result',result)
+
+  console.log("result", result);
+
   return result;
 }

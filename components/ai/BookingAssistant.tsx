@@ -1020,7 +1020,7 @@ async function speakAnswer(text: string) {
                         type="button"
                         onClick={() =>
                           handleQuickQuestion(
-                            "Are seats A1 and A2 available on GB-102?"
+                            "Which buses have seats available??"
                           )
                         }
                         className="
@@ -1038,14 +1038,14 @@ async function speakAnswer(text: string) {
                           hover:text-teal-800
                         "
                       >
-                        Are seats A1 and A2 available on GB-102?
+                        which busses are available today?
                       </button>
 
                       <button
                         type="button"
                         onClick={() =>
                           handleQuickQuestion(
-                            "Show me buses from Gilgit to Hunza."
+                            "Show me busses are available today?"
                           )
                         }
                         className="
@@ -1063,7 +1063,7 @@ async function speakAnswer(text: string) {
                           hover:text-teal-800
                         "
                       >
-                        Show me buses from Gilgit to Hunza
+                        Show me buses from Hunza to Karachi ?
                       </button>
                     </div>
                   </div>

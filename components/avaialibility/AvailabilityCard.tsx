@@ -926,170 +926,175 @@ export default function AvailabilityCard({ bus }: Props) {
                       TRIP DETAILS
                   ================================================== */}
 
-                  <div className="rounded-2xl bg-gray-50 p-4 sm:p-5">
-                    <div className="mb-5 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
-                        <Bus
-                          size={20}
-                          className="text-teal-700"
-                        />
-                      </div>
+                
+{/* ==================================================
+    TRIP DETAILS
+================================================== */}
 
-                      <div>
-                        <h3 className="font-bold text-gray-900">
-                          Trip Details
-                        </h3>
+<div className="rounded-2xl bg-gray-50 p-4 sm:p-5">
+  <div className="mb-5 flex items-center gap-3">
+    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+      <Bus
+        size={20}
+        className="text-teal-700"
+      />
+    </div>
 
-                        <p className="text-xs text-gray-500">
-                          Your selected trip
-                        </p>
-                      </div>
-                    </div>
+    <div>
+      <h3 className="font-bold text-gray-900">
+        Trip Details
+      </h3>
 
-                    <div className="space-y-3">
-                      {/* BUS NUMBER */}
+      <p className="text-xs text-gray-500">
+        Your selected trip
+      </p>
+    </div>
+  </div>
 
-                      <div>
-                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
-                          BUS NUMBER
-                        </label>
+  <div className="space-y-3">
 
-                        <input
-                          disabled
-                          value={
-                            currentBus.busNumber
-                          }
-                          className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
-                        />
-                      </div>
+    {/* BUS NUMBER */}
 
-                      {/* DRIVER PHONE */}
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        BUS NUMBER
+      </label>
 
-                      <div>
-                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
-                          DRIVER PHONE
-                        </label>
+      <input
+        disabled
+        value={currentBus.busNumber}
+        className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+      />
+    </div>
 
-                        <input
-                          disabled
-                          value={
-                            currentBus.driverPhone
-                          }
-                          className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
-                        />
-                      </div>
+    {/* DRIVER PHONE */}
 
-                      {/* BOOKED SEAT */}
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        DRIVER PHONE
+      </label>
 
-                      <div>
-                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
-                          BOOKED SEAT
-                          {selectedSeats.length >
-                          1
-                            ? "S"
-                            : ""}
-                        </label>
+      <input
+        disabled
+        value={currentBus.driverPhone}
+        className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+      />
+    </div>
 
-                        <input
-                          disabled
-                          value={selectedSeats.join(
-                            ", "
-                          )}
-                          className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
-                        />
-                      </div>
+    {/* HAIKAL CONTACT NUMBER */}
 
-                      {/* ROUTE */}
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        HAIKAL CONTACT NUMBER
+      </label>
 
-                      <div>
-                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
-                          ROUTE
-                        </label>
+      <input
+        disabled
+        value="03139929970"
+        className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+      />
+    </div>
 
-                        <input
-                          disabled
-                          value={`${currentBus.pickup} → ${currentBus.dropoff}`}
-                          className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
-                        />
-                      </div>
+    {/* BOOKED SEAT */}
 
-                      {/* DEPARTURE */}
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        BOOKED SEAT
+        {selectedSeats.length > 1 ? "S" : ""}
+      </label>
 
-                      <div>
-                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
-                          DEPARTURE
-                        </label>
+      <input
+        disabled
+        value={selectedSeats.join(", ")}
+        className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+      />
+    </div>
 
-                        <div className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-gray-100 px-3">
-                          <CalendarDays
-                            size={15}
-                            className="text-teal-700"
-                          />
+    {/* ROUTE */}
 
-                          <span className="text-sm font-semibold text-gray-600">
-                            {
-                              currentBus.departure
-                            }
-                          </span>
-                        </div>
-                      </div>
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        ROUTE
+      </label>
 
-                      {/* GENDER SUMMARY */}
+      <input
+        disabled
+        value={`${currentBus.pickup} → ${currentBus.dropoff}`}
+        className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+      />
+    </div>
 
-                      <div>
-                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
-                          PASSENGER GENDER
-                        </label>
+    {/* DEPARTURE */}
 
-                        <input
-                          disabled
-                          value={
-                            passenger.gender
-                              ? passenger.gender
-                                  .charAt(0)
-                                  .toUpperCase() +
-                                passenger.gender.slice(
-                                  1
-                                )
-                              : "Not selected"
-                          }
-                          className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
-                        />
-                      </div>
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        DEPARTURE
+      </label>
 
-                      {/* CNIC SUMMARY */}
+      <div className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-gray-100 px-3">
+        <CalendarDays
+          size={15}
+          className="text-teal-700"
+        />
 
-                      <div>
-                        <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
-                          PASSENGER CNIC
-                        </label>
+        <span className="text-sm font-semibold text-gray-600">
+          {currentBus.departure}
+        </span>
+      </div>
+    </div>
 
-                        <input
-                          disabled
-                          value={
-                            passenger.cnic ||
-                            "Not entered"
-                          }
-                          className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
-                        />
-                      </div>
+    {/* GENDER SUMMARY */}
 
-                      {/* TOTAL FARE */}
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        PASSENGER GENDER
+      </label>
 
-                      <div className="border-t border-gray-200 pt-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-500">
-                            Total Fare
-                          </span>
+      <input
+        disabled
+        value={
+          passenger.gender
+            ? passenger.gender.charAt(0).toUpperCase() +
+              passenger.gender.slice(1)
+            : "Not selected"
+        }
+        className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+      />
+    </div>
 
-                          <span className="text-xl font-bold text-teal-700">
-                            Rs.{" "}
-                            {totalFare.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+    {/* CNIC SUMMARY */}
+
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold tracking-wider text-gray-400">
+        PASSENGER CNIC
+      </label>
+
+      <input
+        disabled
+        value={passenger.cnic || "Not entered"}
+        className="h-11 w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 text-sm font-semibold text-gray-600"
+      />
+    </div>
+
+    {/* TOTAL FARE */}
+
+    <div className="border-t border-gray-200 pt-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-500">
+          Total Fare
+        </span>
+
+        <span className="text-xl font-bold text-teal-700">
+          Rs.{" "}
+          {totalFare.toLocaleString()}
+        </span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
                 </div>
               </div>
 
