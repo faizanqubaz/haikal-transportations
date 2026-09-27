@@ -59,20 +59,18 @@ export default function Navbar() {
       {/* MOBILE MENU BACKDROP */}
       <div
         onClick={() => setMobileOpen(false)}
-        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
-          mobileOpen
-            ? "opacity-100"
-            : "pointer-events-none opacity-0"
-        }`}
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${mobileOpen
+          ? "opacity-100"
+          : "pointer-events-none opacity-0"
+          }`}
       />
 
       {/* MOBILE SLIDE-IN PANEL */}
       <div
-        className={`fixed inset-y-0 right-0 z-50 flex w-[85%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
-          mobileOpen
-            ? "translate-x-0"
-            : "translate-x-full"
-        }`}
+        className={`fixed inset-y-0 right-0 z-50 flex w-[85%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out lg:hidden ${mobileOpen
+          ? "translate-x-0"
+          : "translate-x-full"
+          }`}
       >
         {/* MOBILE PANEL HEADER */}
         <div className="flex h-[88px] items-center justify-between border-b border-gray-100 px-5">
@@ -86,7 +84,7 @@ export default function Navbar() {
               alt="Haikal Tours logo"
               width={80}
               height={52}
-              className="h-12 w-20 rounded-lg object-cover shadow-sm"
+              className="h-12 w-20 rounded-full object-cover shadow-sm"
             />
 
             <div className="flex flex-col leading-none">
@@ -132,18 +130,16 @@ export default function Navbar() {
 
               <ChevronDown
                 size={17}
-                className={`text-gray-400 transition-transform duration-200 ${
-                  tourOpen ? "rotate-180" : ""
-                }`}
+                className={`text-gray-400 transition-transform duration-200 ${tourOpen ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
             <div
-              className={`overflow-hidden transition-all duration-300 ${
-                tourOpen
-                  ? "max-h-64 pb-3"
-                  : "max-h-0"
-              }`}
+              className={`overflow-hidden transition-all duration-300 ${tourOpen
+                ? "max-h-64 pb-3"
+                : "max-h-0"
+                }`}
             >
               {serviceLinks.map((item) => (
                 <Link
@@ -210,10 +206,9 @@ export default function Navbar() {
           <Image
             src="/images/haikal.jpg"
             alt="Haikal Tours logo"
-            width={96}
-            height={64}
-            priority
-            className="h-14 w-21 rounded-xl object-cover shadow-sm sm:h-21 sm:w-27"
+            width={80}
+            height={52}
+            className="h-20 w-20 rounded-full object-cover shadow-sm"
           />
 
           <div className="flex flex-col leading-none">
@@ -252,9 +247,8 @@ export default function Navbar() {
 
               <ChevronDown
                 size={15}
-                className={`transition-transform duration-200 ${
-                  tourOpen ? "rotate-180" : ""
-                }`}
+                className={`transition-transform duration-200 ${tourOpen ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
