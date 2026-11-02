@@ -33,7 +33,7 @@ const serviceLinks = [
 // WHATSAPP
 // =====================================================
 
-const whatsappNumber = "923139929970";
+const whatsappNumber = "923554329249";
 
 const whatsappMessage = encodeURIComponent(
   "Hello Haikal Tours, I would like to get more information."
@@ -143,8 +143,8 @@ export default function Navbar() {
           >
             <div className="relative h-11 w-11 overflow-hidden rounded-xl ring-1 ring-[#B8863B]/40">
               <Image
-                src="/images/haikal.jpg"
-                alt="Haikal Tours logo"
+                src="/images/route-lagoon.jpg"
+                alt="faizan logo"
                 fill
                 className="object-cover"
               />
@@ -152,7 +152,7 @@ export default function Navbar() {
 
             <div className="flex flex-col leading-none">
               <span className="font-serif text-[17px] font-semibold tracking-tight text-[#123832]">
-                Haikal
+                Gilgit
               </span>
               <span className="mt-1 text-[10px] font-medium tracking-wide text-[#B8863B]">
                 tours &amp; travel
@@ -313,8 +313,8 @@ export default function Navbar() {
         >
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl ring-1 ring-[#B8863B]/40">
             <Image
-              src="/images/haikal.jpg"
-              alt="Haikal Tours logo"
+              src="/images/route-lagoon.jpg"
+              alt="Gilgit Tours logo"
               fill
               sizes="56px"
               className="object-cover"
@@ -323,7 +323,7 @@ export default function Navbar() {
 
           <div className="flex flex-col leading-none">
             <span className="font-serif text-[21px] font-semibold tracking-tight text-[#123832]">
-              Haikal
+              Gilgit
             </span>
             <span className="mt-1 text-[11px] font-medium tracking-wide text-[#B8863B]">
               tours &amp; travel

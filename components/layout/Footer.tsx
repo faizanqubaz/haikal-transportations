@@ -17,7 +17,7 @@ export default function Footer() {
 
             <div>
               <div className="font-bold">
-                HAIKAL
+                Gilgit
               </div>
 
               <div className="text-xs tracking-[0.3em] text-teal-400">
@@ -123,7 +123,7 @@ export default function Footer() {
 
           <div className="space-y-3 text-sm text-gray-400">
             <p>Phone: +92 XXX XXXXXXX</p>
-            <p>Email: info@haikaltours.com</p>
+            <p>Email: info@gilgittours.com</p>
             <p>Pakistan</p>
           </div>
         </div>
@@ -134,7 +134,7 @@ export default function Footer() {
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 px-4 py-5 text-sm text-gray-500 sm:px-6 md:flex-row lg:px-8">
 
           <p>
-            © {new Date().getFullYear()} Haikal Tours.
+            © {new Date().getFullYear()} Gilgit Tours.
             All rights reserved.
           </p>
 

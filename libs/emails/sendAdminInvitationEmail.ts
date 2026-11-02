@@ -27,11 +27,11 @@ export async function sendAdminInvitationEmail(
   const result = await resend.emails.send({
     from:
       process.env.RESEND_FROM_EMAIL ||
-      "Haikal Tours <updates@updates.inselvolt.de>",
+      "Gilgit Tours <updates@updates.inselvolt.de>",
 
     to: data.email,
 
-    subject: "You're invited to Haikal Tours Admin",
+    subject: "You're invited to Gilgit Tours Admin",
 
     html: `
 <!DOCTYPE html>
@@ -114,7 +114,7 @@ export async function sendAdminInvitationEmail(
       letter-spacing:2px;
     "
   >
-    HAIKAL
+    GILGIT
   </div>
 
   <div
@@ -158,7 +158,7 @@ export async function sendAdminInvitationEmail(
     "
   >
     You have been invited to become an administrator
-    of Haikal Tours.
+    of GILGIT Tours.
   </p>
 
   <table
@@ -287,7 +287,7 @@ export async function sendAdminInvitationEmail(
       font-weight:900;
     "
   >
-    Haikal Tours Admin
+    Gilgit Tours Admin
   </div>
 
   <div

@@ -217,7 +217,7 @@ H </div>
 
 ```
         <div className="mt-4 text-xl font-black tracking-[3px] text-white">
-          HAIKAL
+          Gilgit
         </div>
 
         <div className="mt-1 text-[10px] font-bold tracking-[4px] text-[#b8dddd]">
@@ -240,7 +240,7 @@ H </div>
         </p>
 
         <p className="mt-3 text-xs leading-5 text-gray-400">
-          Please contact a Haikal Tours administrator if you need a new
+          Please contact a GILGIT Tours administrator if you need a new
           invitation.
         </p>
       </div>
@@ -257,7 +257,7 @@ H </div>
 
 
         <div className="mt-4 text-xl font-black tracking-[3px] text-white">
-          HAIKAL
+          GILGIT
         </div>
 
         <div className="mt-1 text-[10px] font-bold tracking-[4px] text-[#b8dddd]">
@@ -306,7 +306,7 @@ H </div>
               </p>
 
               <p className="mt-1 text-xs leading-5 text-gray-500">
-                Your account will have admin access to the Haikal Tours
+                Your account will have admin access to the GILGIT Tours
                 dashboard. Superadmin privileges cannot be created through
                 an invitation.
               </p>

@@ -940,7 +940,7 @@ export default function TodayTripDetailsPage() {
   <div class="footer">
 
     <div class="footer-left">
-      Haikal Tours — Passenger Manifest
+      Gilgit Tours — Passenger Manifest
     </div>
 
     <div class="footer-right">

@@ -820,7 +820,7 @@ async function handleViewSeats(bus: Bus) {
               </div>
 
               <span className="text-sm font-bold text-teal-100">
-                Haikal Transport
+                Gilgit Transport
               </span>
 
             </div>
@@ -2618,7 +2618,7 @@ async function handleViewSeats(bus: Bus) {
 
                 <p className="text-center text-xs text-gray-400 sm:text-left">
                   Your information will be securely sent
-                  to Haikal Tours.
+                  to Gilgit Tours.
                 </p>
 
                 <div className="flex w-full gap-3 sm:w-auto">

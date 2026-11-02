@@ -138,11 +138,11 @@ export default function AdminLoginPage() {
                         {/* LOGO */}
                         <Link href="/" className="flex items-center gap-3">
                             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-lg font-black text-[#063d43] sm:h-12 sm:w-12 sm:text-xl">
-                                H
+                                G
                             </div>
                             <div>
                                 <p className="text-lg font-black tracking-wide text-white sm:text-xl">
-                                    HAIKAL
+                                    Gilgit
                                 </p>
                                 <p className="text-[9px] font-bold tracking-[0.3em] text-teal-200 sm:text-[10px]">
                                     TOURS
@@ -209,12 +209,12 @@ export default function AdminLoginPage() {
                             </h1>
                             <p className="mt-5 text-[15px] leading-7 text-white/65">
                                 Sign in to manage bookings, buses, drivers, and
-                                every departure across the Haikal Tours network.
+                                every departure across the Gilgit Tours network.
                             </p>
                         </div>
 
                         <p className="mt-10 hidden text-sm text-white/35 lg:block">
-                            © {new Date().getFullYear()} Haikal Tours
+                            © {new Date().getFullYear()} Gilgit Tours
                         </p>
                     </div>
                 </div>
@@ -338,12 +338,12 @@ export default function AdminLoginPage() {
                                 href="/"
                                 className="text-sm font-medium text-gray-500 transition hover:text-teal-700"
                             >
-                                ← Back to Haikal Tours
+                                ← Back to Gilgit Tours
                             </Link>
                         </div>
 
                         <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-gray-300 lg:hidden">
-                            <MapPin size={12} />© {new Date().getFullYear()} Haikal Tours
+                            <MapPin size={12} />© {new Date().getFullYear()} Gilgit Tours
                         </p>
                     </div>
                 </div>

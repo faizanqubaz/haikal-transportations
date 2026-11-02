@@ -124,7 +124,7 @@ export default function HomePage() {
           <div>
 
             <p className="mb-4 text-xs font-bold tracking-[0.3em] text-teal-700">
-              WELCOME TO HAIKAL TOURS
+              WELCOME TO Gilgit TOURS
             </p>
 
             <h2 className="max-w-2xl font-serif text-4xl leading-[1.1] text-gray-900 sm:text-5xl lg:text-6xl">
@@ -150,7 +150,7 @@ export default function HomePage() {
               href="/about"
               className="group mt-7 inline-flex items-center gap-2 font-semibold text-teal-700 transition-all"
             >
-              Discover Haikal Tours
+              Discover Gilgit Tours
 
               <ArrowRight
                 size={18}
@@ -616,7 +616,7 @@ import {
           <div className="max-w-2xl">
 
             <p className="mb-3 text-xs font-bold tracking-[0.3em] text-teal-300">
-              WHY HAIKAL TOURS
+              WHY Gilgit TOURS
             </p>
 
             <h2 className="font-serif text-4xl leading-tight sm:text-5xl">
@@ -728,7 +728,7 @@ import {
               </h2>
 
               <p className="mx-auto mt-5 max-w-xl leading-7 text-white/70">
-                Find your perfect destination and let Haikal Tours
+                Find your perfect destination and let Gilgit Tours
                 take care of the details.
               </p>
 

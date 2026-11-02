@@ -265,7 +265,7 @@ export default function TripsPage() {
 
               <Input
                 label="Company"
-                placeholder="Haikal Transport"
+                placeholder="Gilgit Transport"
                 value={form.company}
                 onChange={(v) =>
                   update("company", v)

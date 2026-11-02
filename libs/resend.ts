@@ -65,9 +65,9 @@ export async function sendBookingConfirmationEmail(
   // HAIKAL CONTACT
   // ============================================================
 
-  const haikalContactNumber = "03139929970";
+  const haikalContactNumber = "03554329249";
 
-  const haikalWhatsAppNumber = "923139929970";
+  const haikalWhatsAppNumber = "923554329249";
 
   const haikalWhatsAppMessage = encodeURIComponent(
     `Hello Haikal Tours, I need help regarding my booking ${booking.bookingRef}.`

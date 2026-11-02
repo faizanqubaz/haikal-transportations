@@ -785,7 +785,7 @@ console.log('currentuser',data.user)
             className="flex items-center gap-3"
           >
             <Image
-              src="/images/haikal.jpg"
+              src="/images/route-lagoon.jpg"
               alt="Haikal Tours logo"
               width={56}
               height={56}
@@ -795,7 +795,7 @@ console.log('currentuser',data.user)
 
             <div>
               <p className="text-base font-black tracking-wide text-white">
-                HAIKAL
+                GILGIT
               </p>
 
               <p className="text-[9px] font-bold tracking-[0.3em] text-teal-300">

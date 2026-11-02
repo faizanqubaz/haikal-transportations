@@ -56,8 +56,8 @@ export const availableBuses: BusAvailability[] = [
     id: "bus-001",
 
     busNumber: "HT-101",
-   driverPhone:'03015678719',
-    company: "Haikal Tours",
+   driverPhone:'03554329249',
+    company: "Gilgit Tours",
 
     route: "Islamabad → Hunza",
 
@@ -94,7 +94,7 @@ export const availableBuses: BusAvailability[] = [
 
     busNumber: "HT-205",
 
-    company: "Haikal Tours",
+    company: "Gilgit Tours",
 
     route: "Islamabad → Gilgit",
 
@@ -135,7 +135,7 @@ export const availableBuses: BusAvailability[] = [
 
     busNumber: "HT-310",
 
-    company: "Haikal Tours",
+    company: "Gilgit Tours",
 
     route: "Lahore → Islamabad",
 
